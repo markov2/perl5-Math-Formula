@@ -5,6 +5,7 @@ lib/Math/Formula/Type.pm
 Makefile.PL
 MANIFEST
 README.md
+t/01use.t
 t/20integers.t
 t/21booleans.t
 t/22strings.t
