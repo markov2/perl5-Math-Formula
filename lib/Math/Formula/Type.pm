@@ -8,12 +8,53 @@ use base 'Math::Formula::Token';
 # or constructed from a computed value.  The second is a value, which can be
 # used in computation.  More elements are type specific.
 
-sub value  { my $self = shift; $self->[1] //= $self->_value($self->[0], @_) }
-sub _value { $_[1] }
+=chapter NAME
+
+Math::Formula::Type - variable types for Math::Formular
+
+=chapter SYNOPSIS
+  my $string = MF::STRING->new("example");
+  my $answer = MF::INTEGER->new(42);
+
+  # See more details per section
+
+=chapter DESCRIPTION
+This page describes are Types used by M<Math::Formula>. All parts of an
+expression has a known type, and also the type of the result of an expression
+is known beforehand.
+
+=section Constructors
+
+=cut
+
+#-----------------
+=section Attributes
+The following attributes are supported for any Type defined on this page.
+
+Any Type can be cast into a MF::STRING.
+=cut
 
 __PACKAGE__->CAST(
 	[ 'MF::STRING' => sub { $_[0]->token } ],
 );
+
+=method value
+Where M<token()> returns a string representation of the instance, the
+C<value()> produces its translation into internal Perl values or objects,
+ready to be involved in computations.
+=cut
+
+sub value  { my $self = shift; $self->[1] //= $self->_value($self->[0], @_) }
+sub _value { $_[1] }
+
+=method collapsed
+Returns the normalized version of the M<token()>: leading and trailing blanks
+removed, intermediate sequences of blanks shortened to one blank.
+=cut
+
+sub collapsed($) { $_[0]->token =~ s/\s+/ /gr =~ s/^ //r =~ s/ $//r }
+
+### The following are for internal administration, hence not documented.
 
 my %cast;
 sub CAST(@)
@@ -42,14 +83,13 @@ sub PREOP($)
 	}
 }
 
-sub collapsed($)
-{	my ($self, $node) = @_;
-	$self->token =~ s/\s+/ /gr =~ s/^ //r =~ s/ $//r;
-}
+#-----------------
+=section MF::BOOLEAN, a thruth value
+Represents a truth value, either C<true> or C<false>.
 
-###
-### BOOLEAN
-###
+Booleans implement the prefix operator "C<+>", and infix operators 'C<and>',
+'C<or>', and 'C<xor>'.
+=cut
 
 package
 	MF::BOOLEAN;          # no a new line, so not in CPAN index
@@ -67,40 +107,70 @@ __PACKAGE__->DYOP(
 );
 
 sub _token($) {	$_[1] ? 'true' : 'false' }
+sub _value($) { $_[1] eq 'true' }
 
-###
-### STRING
-###
+#-----------------
+=section MF::STRING, contains text
+Represents a sequence of UTF8 characters, which may be used single and
+double quoted.
+
+Strings may be cast into regular expressions (MF::REGEXP) when used on the right
+side of a regular expression match operator ('C<=~>' and 'C<!~>').
+
+Strings may be cast into a pattern (MF::PATTERM) when used on the right
+of a pattern match operator ('C<like>' and 'C<unlike>').
+
+Besides the four match operators, strings can be concatenated using 'C<~>'.
+=cut
 
 package
 	MF::STRING;
 
 use base 'Math::Formula::Type';
-use Text::Glob  qw(glob_to_regex);
 
-__PACKAGE__->DYOP(
-	[ '~',      'MF::STRING' => 'MF::STRING',  sub { $_[0]->value .  $_[1]->value } ],
-	[ '=~',     'MF::STRING' => 'MF::BOOLEAN', sub { $_[0]->value =~ $_[1]->value } ],
-	[ '!~',     'MF::STRING' => 'MF::BOOLEAN', sub { $_[0]->value !~ $_[1]->value } ],
-	[ 'like',   'MF::STRING' => 'MF::BOOLEAN', sub { $_[0]->value =~ $_[2]->pattern } ],
-	[ 'unlike', 'MF::STRING' => 'MF::BOOLEAN', sub { $_[0]->value !~ $_[2]->pattern } ],
+__PACKAGE__->CAST(
+	[ 'MF::REGEXP'  => sub { MF::REGEXP->_from_string($_[0]) } ],
+	[ 'MF::PATTERN' => sub { MF::PATTERN->_from_string($_[0]) } ],
 );
 
-sub pattern { $_[0][2] //= glob_to_regex($_[0]->value) }
+__PACKAGE__->DYOP(
+	[ '~',      'MF::STRING'  => 'MF::STRING',  sub { $_[0]->value .  $_[1]->value } ],
+	[ '=~',     'MF::REGEXP'  => 'MF::BOOLEAN', sub { $_[0]->value =~ $_[1]->regexp } ],
+	[ '!~',     'MF::REGEXP'  => 'MF::BOOLEAN', sub { $_[0]->value !~ $_[1]->regexp } ],
+	[ 'like',   'MF::PATTERN' => 'MF::BOOLEAN', sub { $_[0]->value =~ $_[2]->regexp } ],
+	[ 'unlike', 'MF::PATTERN' => 'MF::BOOLEAN', sub { $_[0]->value !~ $_[2]->regexp } ],
+);
+
+sub _token($) { '"' . ($_[1] =~ s/[\"]/\\$1/gr) . '"' }
 
 sub _value($)
 {	my $token = $_[1];
 
-	  substr($token, 0, 1) eq '"'
-	? $token =~ s/^"//r =~ s/"$//r =~ s/\\([\\"])/$1/gr
-	: $token =~ s/^'//r =~ s/'$//r =~ s/\\([\\'])/$1/gr;
+	  substr($token, 0, 1) eq '"' ? $token =~ s/^"//r =~ s/"$//r =~ s/\\([\\"])/$1/gr
+	: substr($token, 0, 1) eq "'" ? $token =~ s/^'//r =~ s/'$//r =~ s/\\([\\'])/$1/gr
+	: $token;  # from code
 }
 
-sub _token($) { '"' . ($_[1] =~ s/[\"]/\\$1/gr) . '"' }
+#-----------------
+=section MF::INTEGER, a long whole number
+Integers contain a sequence of ASCII digits, optionally followed by a multiplier.
+Numbers may use an underscore ('C<_>') on the thousands, to be more readible.
+For instance, 'C<42k>' is equal to 'C<42_000>'.
 
-###
-### INTEGER
-###
+Supported multipliers are
+=over 4
+=item * 1000-based C<k>, C<M>, C<G>, C<T>, C<E>, and C<Z>;
+=item * 1024-based C<kibi>, C<Mibi>, C<Gibi>, C<Tibi>, C<Eibi>, and C<Zibi>;
+=back
+
+Integers can be cast to booleans, where C<0> means C<false> and all other
+numbers are C<true>.
+
+Integers support prefix operators C<+> and C<->.
+
+Integers support infox operators C<+>, C<->, C<*>, C</>, and all numberic comparison
+operators.
+=cut
 
 package
 	MF::INTEGER;
@@ -109,7 +179,7 @@ use base 'Math::Formula::Type';
 use Log::Report 'math-formula', import => [ qw/error __x/ ];
 
 __PACKAGE__->CAST(
-	[ 'MF::FLOAT'   => sub { MF::FLOAT->new($_[0]->value) } ],
+#	[ 'MF::FLOAT'   => sub { MF::FLOAT->new($_[0]->value) } ],
 	[ 'MF::BOOLEAN' => sub { MF::BOOLEAN->new($_[0]->value) != 0 } ],
 );
 
@@ -129,7 +199,7 @@ __PACKAGE__->DYOP(
 my $gibi        = 1024 * 1024 * 1024;
 
 my $multipliers = '[kMGTEZ](?:ibi)?\b';
-sub multipliers { $multipliers }
+sub _multipliers { $multipliers }
 
 my %multipliers = (
 	k => 1000, M => 1000_000, G => 1000_000_000, T => 1000_000_000_000, E => 1e15, Z => 1e18,
@@ -146,9 +216,17 @@ sub _value($)
 	($1 =~ s/_//gr) * ($2 ? $multipliers{$2} : 1);
 }
 
-###
-### DATE
-###
+#-----------------
+=section MF::DATE, refers to a day in some timezone
+A date has format 'YYYY-MM-DD+TZ', for instance C<2023-02-20+0100>.
+
+The date may be cast into a datetime, where the time is set to C<00:00:00>.
+This transformation is actually slightly problematic: a date means "anywhere
+during the day, where a datetime is a specific moment.
+
+You may add (C<+>) and subtract (C<->) durations from a date, which result in
+datetimes because the duration may contain day fragments.
+=cut
 
 package
 	MF::DATE;
@@ -174,13 +252,70 @@ __PACKAGE__->CAST(
 );
 
 __PACKAGE__->DYOP(
-	[ '+', 'MF::DURATION' => 'MF::DATE', sub { ... } ],
-	[ '-', 'MF::DURATION' => 'MF::DATE', sub { ... } ],
+	[ '+', 'MF::DURATION' => 'MF::DATETIME', sub { ... } ],
+	[ '-', 'MF::DURATION' => 'MF::DATETIME', sub { ... } ],
 );
 
-###
-### DURATION
-###
+#-----------------
+=section MF::DATETIME, refers to a moment of time
+The datetime is a complex value.  In its full extend, it looks like this:
+
+  2013-02-20T15:04:12.231+0200
+
+Mind the 'C<T>' between the date and the time components.  Second fractions are optional.
+
+The timezone is relative to UTC.  The first two digits reflect an hour difference, the
+latter two are minutes.
+
+Datetimes can be cast to a time or a date, with loss of information.
+
+It is possible to add (C<+>) and subtract (C<->) durations from a datetime, which result
+in a new datetime.  When you subtract one datetime from another datetime, the result is
+a duration.
+=cut
+
+package
+	MF::DATETIME;
+
+use base 'Math::Formula::Type';
+use DateTime::Duration ();
+
+__PACKAGE__->CAST(
+	[ 'MF::TIME' => sub { $_[0]->value->clone } ],
+	[ 'MF::DATE' => sub { $_[0]->value->clone } ],
+);
+
+__PACKAGE__->DYOP(
+	[ '+',   'MF::DURATION' => 'MF::DATETIME', sub { $_[0]->value->clone->add_duration($_[1]->value) } ],
+	[ '-',   'MF::DURATION' => 'MF::DATETIME', sub { $_[0]->value->clone->subtract_duration($_[1]->value) } ],
+	[ '-',   'MF::DATETIME' => 'MF::DURATION', sub { $_[0]->value->clone->subtract_datetime($_[1]->value) } ],
+);
+
+
+#-----------------
+=section MF::TIME, a moment during any day
+Usefull to indicate a daily repeating event.  For instance, C<start-backup: 04:00:12>. 
+=cut
+
+package
+	MF::TIME;
+
+use base 'Math::Formula::Type';
+
+sub _token($) { $_[1]->ymd }
+
+#-----------------
+=section MF::DURATION, a period of time
+Durations are usually added to datetimes, and may be negative.
+
+Durations can be added (C<+>) together, subtracted (C<->) together,
+or multiplied by an integer factor.
+
+B<Be warned> that operations may not always lead to the expected results.
+A sum of 12 months will lead to 1 year, but 40 days will stay 40 days because the
+day length differs per month.  This will only be resolved when the duration is added
+to an actual datetime.
+=cut
 
 package
 	MF::DURATION;
@@ -234,44 +369,20 @@ sub _value($)
 	);
 }
 
-###
-### DATETIME
-###
+#-----------------
+=section MF::NAME, refers to something in the context
+The M<Math::Formula::Context> object contains translations for names to
+contextual objects.  Names are the usual tokens: unicode alpha-numeric
+characters and underscore (C<_>), where the first character cannot be
+a digit.
 
-package
-	MF::DATETIME;
+On the right-side of a fragment indicator C<#> or method indicator C<.>,
+the name will be lookup in the features of the object on the left of that
+operator.
 
-use base 'Math::Formula::Type';
-use DateTime::Duration ();
-
-__PACKAGE__->CAST(
-	[ 'MF::TIME' => sub { $_[0]->value->clone } ],
-);
-
-__PACKAGE__->DYOP(
-	[ '+',   'MF::DURATION' => 'MF::DATETIME', sub { $_[0]->value->clone->add_duration($_[1]->value) } ],
-	[ '-',   'MF::DURATION' => 'MF::DATETIME', sub { $_[0]->value->clone->subtract_duration($_[1]->value) } ],
-	[ '-',   'MF::DATETIME' => 'MF::DURATION', sub { $_[0]->value->clone->subtract_datetime($_[1]->value) } ],
-);
-
-###
-### TIME
-###
-
-package
-	MF::TIME;
-
-use base 'Math::Formula::Type';
-
-__PACKAGE__->CAST(
-	[ 'MF::DATETIME' => sub { $_[0]->value } ],
-);
-
-sub _token($) { $_[1]->ymd }
-
-###
-### NAME
-###
+A name which is not right of a C<#> or C<.> can be cast into a object
+from the context.
+=cut
 
 package
 	MF::NAME;
@@ -279,38 +390,109 @@ package
 use base 'Math::Formula::Type';
 use Log::Report 'math-formula', import => [ qw/error __x/ ];
 
-__PACKAGE__->DYOP(
-	[ '#',   'MF::NAME' => undef, \&_fragment ],
-	[ '.',   'MF::NAME' => undef, \&_method   ],
-);
-
 my $pattern = '[_\p{Alpha}][_\p{AlNum}]*';
 my $legal   = qr/^$pattern$/o;
 
+sub _object($$)
+{	my ($self, $expr, $context) = @_;
+
+	my $object = $context->object($self->value)
+		or error __x"expression '{expr}', cannot find object '{name}' in context",
+			expr => $expr->name, name => $self->token;
+
+	MF::OBJECT->new($self, $object);
+}
+
+__PACKAGE__->CAST(
+	[ 'MF::OBJECT' => \&_object ],
+);
+
 sub _pattern() { $pattern }
 
-sub _value($$)
-{	my ($self, $token, $expr, $context) = @_;
+=c_method validated $string, $where
+Create a MF::NAME from a $string which needs to be validated for being a valid
+name.  The $where will be used in error messages when the $string is invalid.
+=cut
 
+sub validated($$)
+{	my ($class, $name, $where) = @_;
+
+    $name =~ $legal
+		or error __x"Illegal name '{name}' in '{where}'",
+			name => $name =~ s/[^_\p{AlNum}]/ϴ/gr, where => $where;
+
+	$class->new($name);
 }
+
+#-----------------
+=section MF::OBJECT, access to externally provided data
+=cut
+
+package
+	MF::OBJECT;
+
+use base 'Math::Formula::Type';
+use Log::Report 'math-formula', import => [ qw/error __x/ ];
 
 sub _fragment()
 {	my ($self, $fragment, $expr, $context) = @_;
-	my $object = $self->value($expr);
 	...
 }
 
 sub _method()
 {	my ($self, $method, $expr) = @_;
-	my $object = $self->value($expr);
 	...
 }
 
-sub validated($$)
-{	my ($class, $name, $where) = @_;
-    $name =~ $legal
-		or error __x"Illegal name '{name}' in '{where}'",
-			name => $name =~ s/[^_\p{AlNum}]/X/gr, where => $where;
+__PACKAGE__->DYOP(
+	[ '#',   'MF::NAME' => undef, \&_fragment ],
+	[ '.',   'MF::NAME' => undef, \&_method   ],
+);
+
+
+#-----------------
+=section MF::PATTERN, pattern matching
+This type implements (file-system alike) pattern matching for the
+C<like> and C<unlike> operators.
+=cut
+
+package
+    MF::PATTERN;
+
+use base 'MF::STRING';
+
+use Text::Glob  qw(glob_to_regex);
+sub regexp { $_[0][2] //= glob_to_regex($_[0]->value) }
+
+sub _from_string($)
+{	my ($class, $string) = @_;
+	bless $string, $class;
+}
+
+
+#-----------------
+=section MF::REGEXP, Regular expression
+This type implements regular expressions for the C<=~> and C<!~> operators.
+
+The base of a regular expression is a single or double quote string. When the
+operators are detected, those will automatically be cast into a regexp.
+=cut
+
+package
+    MF::REGEXP;
+
+use base 'MF::STRING';
+
+sub regexp
+{	my $self = shift;
+	return $self->[2] if defined $self->[2];
+	my $value = $self->value =~ s!/!\\/!g;
+	$self->[2] = qr/$value/xuo;
+}
+
+sub _from_string($)
+{	my ($class, $string) = @_;
+	bless $string, $class;
 }
 
 1;

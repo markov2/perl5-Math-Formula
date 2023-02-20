@@ -110,7 +110,7 @@ sub unuseObject($)
 
 	my $name
 	  = ! blessed $which ? MF::NAME->validated($which, 'context unuse object')
-	  ? $which->isa('MF::OBJECT') ? $which->name
+	  : $which->isa('MF::OBJECT') ? $which->name
 	  : $which;
 
 	my $objects = $self->{MFC_objects};
