@@ -58,13 +58,11 @@ sub _test($$)
 
 my $multipliers = MF::INTEGER->_multipliers;
 my $match_name  = MF::NAME->_pattern;
-
-my $match_date  = '[12][0-9]{3} \- (?: 0[1-9] | 1[012] ) \- (?: 0[1-9]|[12][0-9]|3[01])';
-my $match_time  = '(?:[01][0-9]|2[0-3]) \: [0-5][0-9] \: (?:[0-5][0-9]|6[01]) (?:\.[0-9]+)?';
+my $match_date  = MF::DATE->_pattern;
+my $match_time  = MF::TIME->_pattern;
 my $match_tz    = '[+-] [0-9]{4}';
 
-my $match_duration = 'P (?:[0-9]+Y)? (?:[0-9]+M)? (?:[0-9]+D)? '
-				. '(?:T (?:[0-9]+H)? (?:[0-9]+M)? (?:[0-9]+(?:\.[0-9]+)?S)? )? \b';
+my $match_duration = MF::DURATION->_pattern;
 
 my $match_op    = join '|',
 	'[*\/+\-#~.]',

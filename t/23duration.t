@@ -17,16 +17,18 @@ my $long_duration = 'P2Y5M12DT11H45M12.345S';
 is_deeply $expr->_tokenize($long_duration), [MF::DURATION->new($long_duration )];
 
 my $dur1 = MF::DURATION->new('P1Y')->value;
+ok defined $dur1, 'simple parsing';
 isa_ok $dur1, 'DateTime::Duration';
 cmp_ok $dur1->in_units('months'), '==', 12;  # only limited conversion support by D::D
 
-my $dur2a = MF::DURATION->new('P20DT10H15S')->value;
-isa_ok $dur2a, 'DateTime::Duration';
-is $dur2a->in_units('days'), 20;    # ->days must be used icw weeks: 6 days + 2 weeks :-(
-is $dur2a->hours,   10;
-is $dur2a->seconds, 15;
+my $dur2 = MF::DURATION->new('P20DT10H15S')->value;
+ok defined $dur2, 'complex parsing';
+isa_ok $dur2, 'DateTime::Duration';
+is $dur2->in_units('days'), 20;    # ->days must be used icw weeks: 6 days + 2 weeks :-(
+is $dur2->hours,   10;
+is $dur2->seconds, 15;
 
 my $dur3 = MF::DURATION->new(undef, DateTime::Duration->new);
-is $dur3->token, 'PT0H0M0S';
+is $dur3->token, 'PT0H0M0S', 'no duration';
 
 done_testing;

@@ -233,6 +233,8 @@ package
 
 use base 'Math::Formula::Type';
 
+sub _pattern { '[12][0-9]{3} \- (?: 0[1-9] | 1[012] ) \- (?: 0[1-9]|[12][0-9]|3[01])' }
+
 # In really exceptional cases, an integer expression can be mis-detected as DATE
 sub _cast_int()
 {	my $self = shift;
@@ -258,8 +260,11 @@ __PACKAGE__->DYOP(
 
 #-----------------
 =section MF::DATETIME, refers to a moment of time
-The datetime is a complex value.  In its full extend, it looks like this:
+The datetime is a complex value.  The ISO8601 specification offers many, many options which
+make interpretation expensive.  To simplify access, one version is chosen.  This is an
+example of that version:
 
+  yyyy-mm-ddThh:mm:ss.sss+hhmm
   2013-02-20T15:04:12.231+0200
 
 Mind the 'C<T>' between the date and the time components.  Second fractions are optional.
@@ -278,7 +283,7 @@ package
 	MF::DATETIME;
 
 use base 'Math::Formula::Type';
-use DateTime::Duration ();
+use DateTime ();
 
 __PACKAGE__->CAST(
 	[ 'MF::TIME' => sub { $_[0]->value->clone } ],
@@ -293,6 +298,18 @@ __PACKAGE__->DYOP(
 
 sub _value($)
 {	my ($self, $token) = @_;
+	$token =~ m/^
+		([12][0-9]{3}) \- (0[1-9]|1[012]) \- (0[1-9]|[12][0-9]|3[01]) T
+		([01][0-9]|2[0-3]) \: ([0-5][0-9]) \: ([0-5][0-9]|6[01]) (?:\.([0-9]+))?
+		([+-] [0-9]{4})?
+	$ /x or return;
+
+	my $tz_offset = $8 // '+0000';  # careful with named matches :-(
+	my @args = ( year => $1, month => $2, day => $3, hour => $4, minute => $5, second => $6,
+		nanosecond => ($7 // 0) * 1_000_000_000 );
+	my $tz = DateTime::TimeZone::OffsetOnly->new(offset => $tz_offset);
+
+	DateTime->new(@args, time_zone => $tz);
 }
 
 #-----------------
@@ -305,11 +322,33 @@ package
 
 use base 'Math::Formula::Type';
 
-sub _token($) { $_[1]->ymd }
+sub _pattern { '(?:[01][0-9]|2[0-3]) \: [0-5][0-9] \: (?:[0-5][0-9]|6[01]) (?:\.[0-9]+)?' }
+
+sub _token($)
+{	my $dt   = $_[1];
+	my $ns   = $dt->nanosecond;
+	my $frac = $ns ? sprintf(".%09d", $dt->nanosecond) =~ s/0+$//r : '';
+	$dt->hms . $frac . $dt->time_zone->name;
+}
+
+sub _value($)
+{	my ($self, $token) = @_;
+	$token =~ m/^
+		([01][0-9]|2[0-3]) \: ([0-5][0-9]) \: ([0-5][0-9]|6[01]) (?:\.([0-9]+))?
+		([+-] [0-9]{4})?
+	$ /x or return;
+
+	my $tz_offset = $5 // '+0000';  # careful with named matches :-(
+	my @args = ( year => 2000, hour => $1, minute => $2, second => $3, nanosecond => ($4 // 0) * 1_000_000_000);
+	my $tz = DateTime::TimeZone::OffsetOnly->new(offset => $tz_offset // '+0000');
+
+	DateTime->new(@args, time_zone => $tz);
+}
 
 #-----------------
 =section MF::DURATION, a period of time
-Durations are usually added to datetimes, and may be negative.
+Durations are usually added to datetimes, and may be negative.  They are formatted in
+ISO8601 standard format.
 
 Durations can be added (C<+>) together, subtracted (C<->) together,
 or multiplied by an integer factor.
@@ -332,6 +371,10 @@ __PACKAGE__->DYOP(
 	[ '*',   'MF::INTEGER'  => 'MF::DURATION', sub { $_[0]->value->clone->multiply($_[1]->value) } ],
 	# Comparison <=> of durations depends on moment, because normalization is not possible
 );
+
+sub _pattern {
+	'P (?:[0-9]+Y)? (?:[0-9]+M)? (?:[0-9]+D)? (?:T (?:[0-9]+H)? (?:[0-9]+M)? (?:[0-9]+(?:\.[0-9]+)?S)? )? \b';
+}
 
 use DateTime::Format::Duration::ISO8601 ();
 my $dur_format = DateTime::Format::Duration::ISO8601->new;
