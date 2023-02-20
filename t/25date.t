@@ -12,9 +12,8 @@ use DateTime::TimeZone::OffsetOnly ();
 
 my $expr = Math::Formula->new(
 	name       => 'test',
-	expression => '1',
+	expression => '2006-11-21',
 );
-
 my $context = {};
 
 foreach my $token (
@@ -42,13 +41,13 @@ my $node3 = MF::DATE->new('2023-01-01')->cast('MF::INTEGER');
 isa_ok $node3, 'MF::INTEGER', 'cast integer to correct';
 is $node3->token, '2021';
 
+### Expression
 
 my $value1a = $expr->evaluate($context, 'MF::DATE');
 isa_ok $value1a, 'MF::DATE', 'not converted';
 
 my $value1b = $expr->evaluate($context, 'MF::INTEGER');
 isa_ok $value1b, 'MF::INTEGER', 'converted to int';
-cmp_ok $value1b->value, '==', 2003;
-
+cmp_ok $value1b->value, '==', 2006 -11 -21;
 
 done_testing;

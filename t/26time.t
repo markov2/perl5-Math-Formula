@@ -39,9 +39,8 @@ is $node->token, '03:20:04.001023-1012', 'formatting with frac';
 my $random2 = DateTime->new(year => 2000, hour => 7, minute => 12, second => 8,
   time_zone => DateTime::TimeZone::OffsetOnly->new(offset => '+0234'),
 );
+
 my $node2 = MF::TIME->new(undef, $random2);
 is $node2->token, '07:12:08+0234', 'formatting without frac';
-
-my $node = MF::TIME->new(undef, $random);
 
 done_testing;

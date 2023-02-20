@@ -38,7 +38,12 @@ sub cast($)
 {	my ($self, $to) = @_;
 	return MF::STRING->new(undef, $self->token)
 		if $to eq 'MF::STRING';
-};
+}
+
+
+# Returns a value as result of a calculation.
+# nothing to compute for most types: simply itself
+sub _compute { $_[0] }
 
 =method value
 Where M<token()> returns a string representation of the instance, the
@@ -67,14 +72,8 @@ sub INFIX(@)
 	}
 }
 
-my %prefix;
-sub PREFIX($)
-{	my $class = shift;
-	while(my $def = shift)
-	{	my ($op, $becomes, $handler) = @$def;
-		$prefix{$op} = [ $becomes, $handler ];
-	}
-}
+#XXX now, the search with cast() needs to start
+sub prefix { undef }
 
 #-----------------
 =section MF::BOOLEAN, a thruth value
@@ -89,9 +88,13 @@ package
 
 use base 'Math::Formula::Type';
 
-__PACKAGE__->PREFIX(
-	[ 'not' => 'MF::BOOLEAN', sub { ! $_[0]->value } ],
-);
+sub prefix($)
+{	my ($self, $op) = @_;
+	if($op eq 'not')
+	{	return MF::BOOLEAN->new(undef, ! $_[0]->value);
+	}
+	$self->SUPER::prefix($op);
+}
 
 __PACKAGE__->INFIX(
 	[ 'and', 'MF::BOOLEAN' => 'MF::BOOLEAN', sub { $_[0]->value and $_[1]->value } ],
@@ -181,10 +184,12 @@ sub cast($)
 	: $self->SUPER::cast($to);
 }
 
-__PACKAGE__->PREFIX(
-	[ '+' => 'MF::INTEGER', sub {   $_[0]->value } ],
-	[ '-' => 'MF::INTEGER', sub { - $_[0]->value } ],
-);
+sub prefix($)
+{	my ($self, $op) = @_;
+	  $op eq '+' ? $self
+	: $op eq '-' ? MF::INTEGER->new(undef, - $_[0]->value)
+	: $self->SUPER::prefix($op)
+}
 
 __PACKAGE__->INFIX(
 	[ '+',   'MF::INTEGER' => 'MF::INTEGER', sub { $_[0]->value  +  $_[1]->value } ],

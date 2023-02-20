@@ -15,4 +15,10 @@ my $expr = Math::Formula->new(
 is_deeply $expr->_tokenize('true'),     [MF::BOOLEAN->new('true')];
 is_deeply $expr->_tokenize('false'),    [MF::BOOLEAN->new('false')];
 
+$expr->_test('not true');
+is $expr->evaluate({})->token, 'false';
+
+$expr->_test('not false');
+is $expr->evaluate({})->token, 'true';
+
 done_testing;

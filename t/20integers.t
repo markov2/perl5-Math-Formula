@@ -45,4 +45,13 @@ isa_ok $bool2, 'MF::BOOLEAN', 'cast to false';
 is $bool2->value, 0;
 is $bool2->token, 'false';
 
+$expr->_test('+4');
+cmp_ok $expr->evaluate({})->value, '==', 4, 'prefix +';
+
+$expr->_test('-4');
+cmp_ok $expr->evaluate({})->value, '==', -4, 'prefix -';
+
+$expr->_test('+-++--4');
+cmp_ok $expr->evaluate({})->value, '==', -4, 'prefix list';
+
 done_testing;

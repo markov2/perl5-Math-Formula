@@ -115,7 +115,10 @@ sub _build_tree($$)
 
   PROGRESS:
 	while(my $first = shift @$t)
-	{	if($first->isa('MF::PARENS'))
+	{
+#warn "LOOP FIRST ", Dumper $first,
+#warn "     MORE  ", Dumper $t;
+		if($first->isa('MF::PARENS'))
 		{	my $level = $first->level;
 
 			my @nodes;
@@ -127,10 +130,10 @@ sub _build_tree($$)
 			redo PROGRESS;
 		}
 
-		if($first->isa('MF::OPERATOR'))
-		{	my $token = $first->token;
+		if(ref $first eq 'MF::OPERATOR')  # unresolved operator
+		{	my $op = $first->token;
 
-			if($token eq '#' || $token eq '.')
+			if($op eq '#' || $op eq '.')
 			{	# Fragments and Methods are always dyadic, but their left-side arg
 				# can be left-out.  As PREOP, they would be RTL but we need LTR
 				unshift @$t, $first;
@@ -138,15 +141,12 @@ sub _build_tree($$)
 				redo PROGRESS;
 			}
 
-			my $prefix = $prefix{$token}
-				or error __x"expression '{name}', operator '{op}' cannot be used monadic",
-				    name => $self->name, op => $token;
-
 			my $next  = $self->_build_tree($t, $prio)
 				or error __x"expression '{name}', monadic '{op}' not followed by anything useful",
-				    name => $self->name, op => $token;
+				    name => $self->name, op => $op;
+#warn "HERE";
 
-			$first = MF::PREFIX->new($token, $next);
+			$first = MF::PREFIX->new($op, $next);
 			redo PROGRESS;
 		}
 
@@ -154,7 +154,7 @@ sub _build_tree($$)
 			or return $first;   # end of expression
 
 ref $next or warn $next;
-		$next->isa('MF::OPERATOR')
+		ref $next eq 'MF::OPERATOR'
 			or error __x"expression '{name}', expected dyadic operator but found '{type}'",
 				name => $self->name, type => ref $next;
 
@@ -180,20 +180,17 @@ ref $next or warn $next;
 
 sub defaultObjectName() { 'unit' }
 
-### EVALUATE
-
-#XXX the values cannot not cached in this object, but in the Context object,
-#XXX because the results may differ per Unit.
-
-sub _compute($)
-{	my ($self, $context, $expect, $node) = @_;
-	...
-}
+=method evaluate $context, [$type]
+Calculate the value for this expression given the $context.  When the expected $type
+is given, the result will be guaranteed of the correct type or C<undef>.
+=cut
 
 sub evaluate($)
 {	my ($self, $context, $expect) = @_;
-	my $value = $self->_compute($context, $expect, $self->_tree);
-    $value ? $value->[2] : undef;
+	my $result = $self->_tree->_compute($context, $self);
+
+	# For external evaluation calls, we must follow the request
+	$expect && ! $result->isa($expect) ? $result->cast($expect) : $result;
 }
 
 1;
