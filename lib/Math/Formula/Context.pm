@@ -42,7 +42,7 @@ computation context which contains values.
 
 =chapter METHODS
 
-=secion Constructors
+=section Constructors
 
 =c_method new %options
 

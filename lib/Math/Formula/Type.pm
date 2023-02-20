@@ -452,8 +452,13 @@ __PACKAGE__->DYOP(
 
 #-----------------
 =section MF::PATTERN, pattern matching
-This type implements (file-system alike) pattern matching for the
-C<like> and C<unlike> operators.
+This type implements pattern matching for the C<like> and C<unlike> operators.
+The patterns are similar to file-system patterns.  However, there is no special meaning
+to leading dots and '/'.
+
+Pattern matching constructs are C<*> (zero or more characters), C<?> (any single
+character), and C<[abcA-Z]> (one of a, b, c, or capital), C<[!abc]> (not a, b, or c).
+Besides, it supports curly alternatives like C<*.{jpg,gif,png}>.
 =cut
 
 package
@@ -461,8 +466,28 @@ package
 
 use base 'MF::STRING';
 
-use Text::Glob  qw(glob_to_regex);
-sub regexp { $_[0][2] //= glob_to_regex($_[0]->value) }
+sub _to_regexp($)
+{	my @chars  = $_[0] =~ m/( \\. | . )/gxu;
+	my (@regexp, $in_alts, $in_range);
+
+	foreach my $char (@chars)
+	{	if(length $char==2) { push @regexp, $char; next }
+		if($char !~ /^[\[\]*?{},!]$/) { push @regexp, $in_range ? $char : quotemeta $char }
+		elsif($char eq '*') { push @regexp, '.*' }
+		elsif($char eq '?') { push @regexp, '.' }
+		elsif($char eq '[') { push @regexp, '['; $in_range++ }
+		elsif($char eq ']') { push @regexp, ']'; $in_range=0 }
+		elsif($char eq '!') { push @regexp, $in_range && $regexp[-1] eq '[' ? '^' : '\!' }
+		elsif($char eq '{') { push @regexp, $in_range ? '{' : '(?:'; $in_range or $in_alts++ }
+		elsif($char eq '}') { push @regexp, $in_range ? '}' : ')';   $in_range or $in_alts=0 }
+		elsif($char eq ',') { push @regexp, $in_alts ? '|' : '\,' }
+		else {die}
+	}
+	my $regexp = join '', @regexp;
+	qr/^${regexp}$/u;
+}
+
+sub regexp() { $_[0][2] //= _to_regexp($_[0]->value) }
 
 sub _from_string($)
 {	my ($class, $string) = @_;
