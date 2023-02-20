@@ -33,7 +33,7 @@ use base 'Math::Formula::Token';
 
 
 package
-	MF::PREOP;
+	MF::PREFIX;
 
 use base 'MF::OPERATOR';
 
@@ -41,7 +41,7 @@ sub tree() { $_[0][1] }
 
 
 package
-	MF::DYOP;
+	MF::INFIX;
 
 use base 'MF::OPERATOR';
 

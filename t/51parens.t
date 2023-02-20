@@ -20,17 +20,17 @@ sub tree_for($)
 }
 
 is_deeply tree_for('(1 + 2) * (3 - 4)'),
-	MF::DYOP->new('*',
-		MF::DYOP->new('+', MF::INTEGER->(1), MF::INTEGER->new(2)),
-		MF::DYOP->new('-', MF::INTEGER->(3), MF::INTEGER->new(4)),
+	MF::INFIX->new('*',
+		MF::INFIX->new('+', MF::INTEGER->(1), MF::INTEGER->new(2)),
+		MF::INFIX->new('-', MF::INTEGER->(3), MF::INTEGER->new(4)),
     );
 
 is_deeply tree_for('(5 * (6 + 7) - 8) * 2'),
-    MF::DYOP->new('*',
-		MF::DYOP->new('-',
-			MF::DYOP->new('*',
+    MF::INFIX->new('*',
+		MF::INFIX->new('-',
+			MF::INFIX->new('*',
 				MF::INTEGER->new('5'),
-				MF::DYOP->new('+', MF::INTEGER->('6'), MF::INTEGER->new('7'))
+				MF::INFIX->new('+', MF::INTEGER->('6'), MF::INTEGER->new('7'))
 			),
 			MF::INTEGER->new('8'),
 		),

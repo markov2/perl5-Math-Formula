@@ -65,21 +65,21 @@ sub CAST(@)
 	}
 }
 
-my %dyop;
-sub DYOP(@)
+my %infix;
+sub INFIX(@)
 {	my $class = shift;
 	while(my $def = shift)
 	{	my ($op, $needs, $becomes, $handler) = @$def;
-		$dyop{$op}{$needs} = [ $becomes, $handler ];
+		$infix{$op}{$needs} = [ $becomes, $handler ];
 	}
 }
 
-my %preop;
-sub PREOP($)
+my %prefix;
+sub PREFIX($)
 {	my $class = shift;
 	while(my $def = shift)
 	{	my ($op, $becomes, $handler) = @$def;
-		$preop{$op} = [ $becomes, $handler ];
+		$prefix{$op} = [ $becomes, $handler ];
 	}
 }
 
@@ -96,11 +96,11 @@ package
 
 use base 'Math::Formula::Type';
 
-__PACKAGE__->PREOP(
+__PACKAGE__->PREFIX(
 	[ 'not' => 'MF::BOOLEAN', sub { ! $_[0]->value } ],
 );
 
-__PACKAGE__->DYOP(
+__PACKAGE__->INFIX(
 	[ 'and', 'MF::BOOLEAN' => 'MF::BOOLEAN', sub { $_[0]->value and $_[1]->value } ],
 	[  'or', 'MF::BOOLEAN' => 'MF::BOOLEAN', sub { $_[0]->value  or $_[1]->value } ],
 	[ 'xor', 'MF::BOOLEAN' => 'MF::BOOLEAN', sub { $_[0]->value xor $_[1]->value } ],
@@ -133,7 +133,7 @@ __PACKAGE__->CAST(
 	[ 'MF::PATTERN' => sub { MF::PATTERN->_from_string($_[0]) } ],
 );
 
-__PACKAGE__->DYOP(
+__PACKAGE__->INFIX(
 	[ '~',      'MF::STRING'  => 'MF::STRING',  sub { $_[0]->value .  $_[1]->value } ],
 	[ '=~',     'MF::REGEXP'  => 'MF::BOOLEAN', sub { $_[0]->value =~ $_[1]->regexp } ],
 	[ '!~',     'MF::REGEXP'  => 'MF::BOOLEAN', sub { $_[0]->value !~ $_[1]->regexp } ],
@@ -183,12 +183,12 @@ __PACKAGE__->CAST(
 	[ 'MF::BOOLEAN' => sub { MF::BOOLEAN->new($_[0]->value) != 0 } ],
 );
 
-__PACKAGE__->PREOP(
+__PACKAGE__->PREFIX(
 	[ '+' => 'MF::INTEGER', sub {   $_[0]->value } ],
 	[ '-' => 'MF::INTEGER', sub { - $_[0]->value } ],
 );
 
-__PACKAGE__->DYOP(
+__PACKAGE__->INFIX(
 	[ '+',   'MF::INTEGER' => 'MF::INTEGER', sub { $_[0]->value  +  $_[1]->value } ],
 	[ '-',   'MF::INTEGER' => 'MF::INTEGER', sub { $_[0]->value  -  $_[1]->value } ],
 	[ '*',   'MF::INTEGER' => 'MF::INTEGER', sub { $_[0]->value  *  $_[1]->value } ],
@@ -214,6 +214,60 @@ sub _value($)
 		or error __x"illegal number format for '{string}'", string => $_[1];
 
 	($1 =~ s/_//gr) * ($2 ? $multipliers{$2} : 1);
+}
+
+#-----------------
+=section MF::DATETIME, refers to a moment of time
+The datetime is a complex value.  The ISO8601 specification offers many, many options which
+make interpretation expensive.  To simplify access, one version is chosen.  This is an
+example of that version:
+
+  yyyy-mm-ddThh:mm:ss.sss+hhmm
+  2013-02-20T15:04:12.231+0200
+
+Mind the 'C<T>' between the date and the time components.  Second fractions are optional.
+
+The timezone is relative to UTC.  The first two digits reflect an hour difference, the
+latter two are minutes.
+
+Datetimes can be cast to a time or a date, with loss of information.
+
+It is possible to add (C<+>) and subtract (C<->) durations from a datetime, which result
+in a new datetime.  When you subtract one datetime from another datetime, the result is
+a duration.
+=cut
+
+package
+	MF::DATETIME;
+
+use base 'Math::Formula::Type';
+use DateTime ();
+
+__PACKAGE__->CAST(
+	[ 'MF::TIME' => sub { $_[0]->value->clone } ],
+	[ 'MF::DATE' => sub { $_[0]->value->clone } ],
+);
+
+__PACKAGE__->INFIX(
+	[ '+',   'MF::DURATION' => 'MF::DATETIME', sub { $_[0]->value->clone->add_duration($_[1]->value) } ],
+	[ '-',   'MF::DURATION' => 'MF::DATETIME', sub { $_[0]->value->clone->subtract_duration($_[1]->value) } ],
+	[ '-',   'MF::DATETIME' => 'MF::DURATION', sub { $_[0]->value->clone->subtract_datetime($_[1]->value) } ],
+);
+
+sub _value($)
+{	my ($self, $token) = @_;
+	$token =~ m/^
+		([12][0-9]{3}) \- (0[1-9]|1[012]) \- (0[1-9]|[12][0-9]|3[01]) T
+		([01][0-9]|2[0-3]) \: ([0-5][0-9]) \: ([0-5][0-9]|6[01]) (?:\.([0-9]+))?
+		([+-] [0-9]{4})?
+	$ /x or return;
+
+	my $tz_offset = $8 // '+0000';  # careful with named matches :-(
+	my @args = ( year => $1, month => $2, day => $3, hour => $4, minute => $5, second => $6,
+		nanosecond => ($7 // 0) * 1_000_000_000 );
+	my $tz = DateTime::TimeZone::OffsetOnly->new(offset => $tz_offset);
+
+	DateTime->new(@args, time_zone => $tz);
 }
 
 #-----------------
@@ -253,60 +307,22 @@ __PACKAGE__->CAST(
 	[ 'MF::INTEGER'  => \&_cast_int ],
 );
 
-__PACKAGE__->DYOP(
+__PACKAGE__->INFIX(
 	[ '+', 'MF::DURATION' => 'MF::DATETIME', sub { ... } ],
 	[ '-', 'MF::DURATION' => 'MF::DATETIME', sub { ... } ],
 );
 
-#-----------------
-=section MF::DATETIME, refers to a moment of time
-The datetime is a complex value.  The ISO8601 specification offers many, many options which
-make interpretation expensive.  To simplify access, one version is chosen.  This is an
-example of that version:
-
-  yyyy-mm-ddThh:mm:ss.sss+hhmm
-  2013-02-20T15:04:12.231+0200
-
-Mind the 'C<T>' between the date and the time components.  Second fractions are optional.
-
-The timezone is relative to UTC.  The first two digits reflect an hour difference, the
-latter two are minutes.
-
-Datetimes can be cast to a time or a date, with loss of information.
-
-It is possible to add (C<+>) and subtract (C<->) durations from a datetime, which result
-in a new datetime.  When you subtract one datetime from another datetime, the result is
-a duration.
-=cut
-
-package
-	MF::DATETIME;
-
-use base 'Math::Formula::Type';
-use DateTime ();
-
-__PACKAGE__->CAST(
-	[ 'MF::TIME' => sub { $_[0]->value->clone } ],
-	[ 'MF::DATE' => sub { $_[0]->value->clone } ],
-);
-
-__PACKAGE__->DYOP(
-	[ '+',   'MF::DURATION' => 'MF::DATETIME', sub { $_[0]->value->clone->add_duration($_[1]->value) } ],
-	[ '-',   'MF::DURATION' => 'MF::DATETIME', sub { $_[0]->value->clone->subtract_duration($_[1]->value) } ],
-	[ '-',   'MF::DATETIME' => 'MF::DURATION', sub { $_[0]->value->clone->subtract_datetime($_[1]->value) } ],
-);
+sub _token($) { $_[1]->ymd . $_[1]->time_zone->name }
 
 sub _value($)
 {	my ($self, $token) = @_;
 	$token =~ m/^
-		([12][0-9]{3}) \- (0[1-9]|1[012]) \- (0[1-9]|[12][0-9]|3[01]) T
-		([01][0-9]|2[0-3]) \: ([0-5][0-9]) \: ([0-5][0-9]|6[01]) (?:\.([0-9]+))?
+		([12][0-9]{3}) \- (0[1-9]|1[012]) \- (0[1-9]|[12][0-9]|3[01])
 		([+-] [0-9]{4})?
 	$ /x or return;
 
-	my $tz_offset = $8 // '+0000';  # careful with named matches :-(
-	my @args = ( year => $1, month => $2, day => $3, hour => $4, minute => $5, second => $6,
-		nanosecond => ($7 // 0) * 1_000_000_000 );
+	my $tz_offset = $4 // '+0000';  # careful with named matches :-(
+	my @args = ( year => $1, month => $2, day => $3);
 	my $tz = DateTime::TimeZone::OffsetOnly->new(offset => $tz_offset);
 
 	DateTime->new(@args, time_zone => $tz);
@@ -365,7 +381,7 @@ package
 use base 'Math::Formula::Type';
 use DateTime::Duration ();
 
-__PACKAGE__->DYOP(
+__PACKAGE__->INFIX(
 	[ '+',   'MF::DURATION' => 'MF::DURATION', sub { $_[0]->value->clone->add_duration($_[1]->value) } ],
 	[ '-',   'MF::DURATION' => 'MF::DURATION', sub { $_[0]->value->clone->subtract_duration($_[1]->value) } ],
 	[ '*',   'MF::INTEGER'  => 'MF::DURATION', sub { $_[0]->value->clone->multiply($_[1]->value) } ],
@@ -457,7 +473,7 @@ sub _method()
 	...
 }
 
-__PACKAGE__->DYOP(
+__PACKAGE__->INFIX(
 	[ '#',   'MF::NAME' => undef, \&_fragment ],
 	[ '.',   'MF::NAME' => undef, \&_method   ],
 );

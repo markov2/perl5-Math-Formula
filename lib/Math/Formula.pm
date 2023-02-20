@@ -108,7 +108,7 @@ sub _tokenize($)
 	\@t;
 }
 
-my (%preop, %dyop, %postop);
+my (%prefix, %infix, %postop);
 sub _build_tree($$)
 {	my ($self, $t, $prio) = @_;
 	return shift @$t if @$t < 2;
@@ -138,7 +138,7 @@ sub _build_tree($$)
 				redo PROGRESS;
 			}
 
-			my $preop = $preop{$token}
+			my $prefix = $prefix{$token}
 				or error __x"expression '{name}', operator '{op}' cannot be used monadic",
 				    name => $self->name, op => $token;
 
@@ -146,7 +146,7 @@ sub _build_tree($$)
 				or error __x"expression '{name}', monadic '{op}' not followed by anything useful",
 				    name => $self->name, op => $token;
 
-			$first = MF::PREOP->new($token, $next);
+			$first = MF::PREFIX->new($token, $next);
 			redo PROGRESS;
 		}
 
@@ -159,21 +159,21 @@ ref $next or warn $next;
 				name => $self->name, type => ref $next;
 
 		my $op   = $next->token;
-		my $dyop = $dyop{$op}
+		my $infix = $infix{$op}
 			or error __x"expression '{name}', dyadic operator '{op}' not implemented",
 				name => $self->name, op => $op;
 
 		@$t or error __x"expression '{name}', dyadic operator '{op}' requires right-hand argument",
 				name => $self->name, op => $op;
 
-		my ($next_prio, $assoc) = @$dyop;
+		my ($next_prio, $assoc) = @$infix;
 
 		return $first
 			if $next_prio < $prio
 			|| ($next_prio==$prio && $assoc==LTR);
 
 		shift @$t;    # apply the operator
-		$first = MF::DYOP->new($op, $first, $self->_build_tree($t, $next_prio));
+		$first = MF::INFIX->new($op, $first, $self->_build_tree($t, $next_prio));
 		redo PROGRESS;
 	}
 }
