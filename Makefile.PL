@@ -9,6 +9,10 @@ WriteMakefile
   , PREREQ_PM    =>
     { 'Test::More'   => 0,
     , 'Log::Report'  => 0,
+
+	, 'DateTime'           => 0,
+	, 'DateTime::Duration' => 0,
+    , 'DateTime::Format::Duration::ISO8601' => 0,
     }
   , AUTHOR       => 'Mark Overmeer <markov@cpan.org>'
   , ABSTRACT     => 'Play trics with hash keys'

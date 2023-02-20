@@ -26,4 +26,7 @@ is $dur2a->in_units('days'), 20;    # ->days must be used icw weeks: 6 days + 2 
 is $dur2a->hours,   10;
 is $dur2a->seconds, 15;
 
+my $dur3 = MF::DURATION->new(undef, DateTime::Duration->new);
+is $dur3->token, 'PT0H0M0S';
+
 done_testing;

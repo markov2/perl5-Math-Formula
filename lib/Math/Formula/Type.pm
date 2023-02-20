@@ -291,6 +291,9 @@ __PACKAGE__->DYOP(
 	[ '-',   'MF::DATETIME' => 'MF::DURATION', sub { $_[0]->value->clone->subtract_datetime($_[1]->value) } ],
 );
 
+sub _value($)
+{	my ($self, $token) = @_;
+}
 
 #-----------------
 =section MF::TIME, a moment during any day
@@ -330,44 +333,11 @@ __PACKAGE__->DYOP(
 	# Comparison <=> of durations depends on moment, because normalization is not possible
 );
 
-sub _token($)
-{	my ($self, $dur) = @_;
-	my ($Y, $M, $D, $H, $m, $S, $n) =
-		$dur->in_units(qw/years months days hours minutes seconds nanoseconds/);
+use DateTime::Format::Duration::ISO8601 ();
+my $dur_format = DateTime::Format::Duration::ISO8601->new;
 
-	return 'P0Y' if $dur->is_zero;
-
-	my $token = $dur->is_negative ? '-P' : 'P';
-	$token   .= ($Y ? $Y.'Y' : '') . ($M ? $M.'M' : '') . ($D ? $D.'D' : '');
-	if($H || $m || $S || $n)
-	{	$token   .= 'T' . ($H ? $H.'H' : '') . ($m ? $m.'M' : '');
-		my $sec   = $n ? sprintf("%d.%09d", ($S // 0), $n) : $S;
-		$token   .= $sec . 'S' if $sec;
-	}
-
-	$token = 'P0Y' if $token eq 'P';
-	$token;
-}
-
-sub _value($)
-{	my ($self, $token) = @_;
-
-	$token =~ m! ^
-			P (?:([0-9]+)Y)? (?:([0-9]+)M)? (?:([0-9]+)D)?
-			(?:T (?:([0-9]+)H)? (?:([0-9]+)M)? (?:([0-9]+)(?:(\.[0-9]+))?S)? )?
-		!x;
-
-	DateTime::Duration->new(
-		years       => $1 // 0,
-		months      => $2 // 0,
-	 	weeks       => 0,
-		days        => $3 // 0,
-		hours       => $4 // 0,
-		minutes     => $5 // 0,
-		seconds     => $6 // 0,
-		nanoseconds => $7 ? int($7 * 1_000_000_000) : 0,
-	);
-}
+sub _token($) { $dur_format->format_duration($_[1]) }
+sub _value($) {	$dur_format->parse_duration($_[1])  }
 
 #-----------------
 =section MF::NAME, refers to something in the context
