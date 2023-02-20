@@ -34,9 +34,11 @@ The following attributes are supported for any Type defined on this page.
 Any Type can be cast into a MF::STRING.
 =cut
 
-__PACKAGE__->CAST(
-	[ 'MF::STRING' => sub { $_[0]->token } ],
-);
+sub cast($)
+{	my ($self, $to) = @_;
+	return MF::STRING->new(undef, $self->token)
+		if $to eq 'MF::STRING';
+};
 
 =method value
 Where M<token()> returns a string representation of the instance, the
@@ -55,15 +57,6 @@ removed, intermediate sequences of blanks shortened to one blank.
 sub collapsed($) { $_[0]->token =~ s/\s+/ /gr =~ s/^ //r =~ s/ $//r }
 
 ### The following are for internal administration, hence not documented.
-
-my %cast;
-sub CAST(@)
-{	my $class = shift;
-	while(my $def = shift)
-	{	my ($to, $handler) = @$def;
-		$cast{$class}{$to} = $handler;
-	}
-}
 
 my %infix;
 sub INFIX(@)
@@ -128,10 +121,13 @@ package
 
 use base 'Math::Formula::Type';
 
-__PACKAGE__->CAST(
-	[ 'MF::REGEXP'  => sub { MF::REGEXP->_from_string($_[0]) } ],
-	[ 'MF::PATTERN' => sub { MF::PATTERN->_from_string($_[0]) } ],
-);
+sub cast($)
+{	my ($self, $to) = @_;
+
+	  $to eq 'MF::REGEXP'  ? MF::REGEXP->_from_string($_[0])
+	: $to eq 'MF::PATTERN' ? MF::PATTERN->_from_string($_[0])
+	: $self->SUPER::cast($to);
+}
 
 __PACKAGE__->INFIX(
 	[ '~',      'MF::STRING'  => 'MF::STRING',  sub { $_[0]->value .  $_[1]->value } ],
@@ -178,10 +174,12 @@ package
 use base 'Math::Formula::Type';
 use Log::Report 'math-formula', import => [ qw/error __x/ ];
 
-__PACKAGE__->CAST(
-#	[ 'MF::FLOAT'   => sub { MF::FLOAT->new($_[0]->value) } ],
-	[ 'MF::BOOLEAN' => sub { MF::BOOLEAN->new($_[0]->value) != 0 } ],
-);
+sub cast($)
+{	my ($self, $to) = @_;
+	  $to eq 'MF::BOOLEAN' ? MF::BOOLEAN->new(undef, $_[0]->value == 0 ? 0 : 1)
+#	: $to eq 'MF::FLOAT'   ? MF::FLOAT->new($_[0]->value) }
+	: $self->SUPER::cast($to);
+}
 
 __PACKAGE__->PREFIX(
 	[ '+' => 'MF::INTEGER', sub {   $_[0]->value } ],
@@ -243,10 +241,12 @@ package
 use base 'Math::Formula::Type';
 use DateTime ();
 
-__PACKAGE__->CAST(
-	[ 'MF::TIME' => sub { $_[0]->value->clone } ],
-	[ 'MF::DATE' => sub { $_[0]->value->clone } ],
-);
+sub cast($)
+{	my ($self, $to) = @_;
+		$to eq 'MF::TIME' ? MF::TIME->new(undef, $_[0]->value->clone)
+	  : $to eq 'MF::DATE' ? MF::DATE->new(undef, $_[0]->value->clone)
+	  : $self->SUPER::cast($to);
+}
 
 __PACKAGE__->INFIX(
 	[ '+',   'MF::DURATION' => 'MF::DATETIME', sub { $_[0]->value->clone->add_duration($_[1]->value) } ],
@@ -289,23 +289,23 @@ use base 'Math::Formula::Type';
 
 sub _pattern { '[12][0-9]{3} \- (?: 0[1-9] | 1[012] ) \- (?: 0[1-9]|[12][0-9]|3[01])' }
 
-# In really exceptional cases, an integer expression can be mis-detected as DATE
-sub _cast_int()
-{	my $self = shift;
-	bless $self, 'MF::INTEGER';
-	$self->[0] = $self->[1] = eval "$self->[0]";
-}
+sub cast($)
+{   my ($self, $to) = @_;
+	if($to eq 'MF::INTEGER')
+	{	# In really exceptional cases, an integer expression can be mis-detected as DATE
+		bless $self, 'MF::INTEGER';
+		$self->[0] = $self->[1] = eval "$self->[0]";
+		return $self;
+	}
 
-sub _cast_dt()
-{	my $v  = $_[0]->value;
-	my $dt = $v =~ /\+/ ? $v =~ s/\+/T00:00:00+/r : $v . 'T00:00:00';
-	MF::DATETIME->new($dt)
-}
+	if($to eq 'MF::DATETIME')
+	{	my $v  = $self->token;
+		my $dt = $v =~ /\+/ ? $v =~ s/\+/T00:00:00+/r : $v . 'T00:00:00';
+		return MF::DATETIME->new(undef, $dt)
+	}
 
-__PACKAGE__->CAST(
-	[ 'MF::DATETIME' => \&_cast_dt  ],
-	[ 'MF::INTEGER'  => \&_cast_int ],
-);
+	$self->SUPER::cast($to);
+}
 
 __PACKAGE__->INFIX(
 	[ '+', 'MF::DURATION' => 'MF::DATETIME', sub { ... } ],
@@ -422,19 +422,19 @@ use Log::Report 'math-formula', import => [ qw/error __x/ ];
 my $pattern = '[_\p{Alpha}][_\p{AlNum}]*';
 my $legal   = qr/^$pattern$/o;
 
-sub _object($$)
-{	my ($self, $expr, $context) = @_;
+sub cast($)
+{	my ($self, $to, $expr, $context) = @_;
 
-	my $object = $context->object($self->value)
-		or error __x"expression '{expr}', cannot find object '{name}' in context",
-			expr => $expr->name, name => $self->token;
+	if($to eq 'MF::OBJECT')
+	{	my $object = $context->object($self->token)
+			or error __x"expression '{expr}', cannot find object '{name}' in context",
+				expr => $expr->name, name => $self->token;
 
-	MF::OBJECT->new($self, $object);
+		return $object;
+	}
+
+	$self->SUPER::cast($to);
 }
-
-__PACKAGE__->CAST(
-	[ 'MF::OBJECT' => \&_object ],
-);
 
 sub _pattern() { $pattern }
 
@@ -540,7 +540,7 @@ use base 'MF::STRING';
 sub regexp
 {	my $self = shift;
 	return $self->[2] if defined $self->[2];
-	my $value = $self->value =~ s!/!\\/!g;
+	my $value = $self->value =~ s!/!\\/!gr;
 	$self->[2] = qr/$value/xuo;
 }
 

@@ -30,4 +30,19 @@ foreach (
 	cmp_ok $i->value, '==', $value;
 }
 
+my $string = MF::INTEGER->new(42)->cast('MF::STRING');
+ok defined $string, 'cast to string';
+isa_ok $string, 'MF::STRING';
+is $string->token, '"42"';
+
+my $bool1 = MF::INTEGER->new(2)->cast('MF::BOOLEAN');
+isa_ok $bool1, 'MF::BOOLEAN', 'cast to true';
+is $bool1->value, 1;
+is $bool1->token, 'true';
+
+my $bool2 = MF::INTEGER->new(0)->cast('MF::BOOLEAN');
+isa_ok $bool2, 'MF::BOOLEAN', 'cast to false';
+is $bool2->value, 0;
+is $bool2->token, 'false';
+
 done_testing;

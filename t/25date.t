@@ -34,11 +34,14 @@ my $random = DateTime->new(year => 2023, month => 2, day => 20,
 my $node = MF::DATE->new(undef, $random);
 is $node->token, '2023-02-20+0100', 'format';
 
-# Rare case where int calc looks like date
-my $tokens1 = $expr->_test('2023-02-18');
-my $node1   = $expr->_tree;
-ok defined $node1,  '... date as int';
-isa_ok $node1, 'MF::DATE';
+my $node2 = MF::DATE->new('2023-01-01+0200')->cast('MF::DATETIME');
+isa_ok $node2, 'MF::DATETIME', 'cast datetime';
+is $node2->token, '2023-01-01T00:00:00+0200';
+
+my $node3 = MF::DATE->new('2023-01-01')->cast('MF::INTEGER');
+isa_ok $node3, 'MF::INTEGER', 'cast integer to correct';
+is $node3->token, '2021';
+
 
 my $value1a = $expr->evaluate($context, 'MF::DATE');
 isa_ok $value1a, 'MF::DATE', 'not converted';
@@ -46,5 +49,6 @@ isa_ok $value1a, 'MF::DATE', 'not converted';
 my $value1b = $expr->evaluate($context, 'MF::INTEGER');
 isa_ok $value1b, 'MF::INTEGER', 'converted to int';
 cmp_ok $value1b->value, '==', 2003;
+
 
 done_testing;
