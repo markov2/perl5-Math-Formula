@@ -56,7 +56,8 @@ sub _test($$)
 ### PARSER
 ###
 
-my $multipliers = MF::INTEGER->multipliers;
+my $multipliers = MF::INTEGER->_multipliers;
+my $match_name  = MF::NAME->_pattern;
 
 my $match_date  = '[12][0-9]{3} \- (?: 0[1-9] | 1[012] ) \- (?: 0[1-9]|[12][0-9]|3[01])';
 my $match_time  = '(?:[01][0-9]|2[0-3]) \: [0-5][0-9] \: (?:[0-5][0-9]|6[01]) (?:\.[0-9]+)?';
@@ -85,8 +86,7 @@ sub _tokenize($)
 		| ( $match_op )		(?{ push @t, MF::OPERATOR->new($+) })
 		| ( $match_duration )
 							(?{ push @t, MF::DURATION->new($+) })
-		| ( [_\p{Alpha}][_\p{AlNum}]* )
-							(?{ push @t, MF::NAME->new($+) })
+		| ( $match_name )	(?{ push @t, MF::NAME->new($+) })
 		| ( $match_date T $match_time (?: $match_tz )? )
 							(?{ push @t, MF::DATETIME->new($+) })
 		| ( $match_date (?: $match_tz )? )
@@ -155,6 +155,7 @@ sub _build_tree($$)
 		my $next = $t->[0]
 			or return $first;   # end of expression
 
+ref $next or warn $next;
 		$next->isa('MF::OPERATOR')
 			or error __x"expression '{name}', expected dyadic operator but found '{type}'",
 				name => $self->name, type => ref $next;

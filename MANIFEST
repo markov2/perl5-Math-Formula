@@ -1,5 +1,6 @@
 ChangeLog
 lib/Math/Formula.pm
+lib/Math/Formula/Context.pm
 lib/Math/Formula/Token.pm
 lib/Math/Formula/Type.pm
 Makefile.PL

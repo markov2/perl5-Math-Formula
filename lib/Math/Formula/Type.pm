@@ -277,13 +277,25 @@ package
 	MF::NAME;
 
 use base 'Math::Formula::Type';
+use Log::Report 'math-formula', import => [ qw/error __x/ ];
+
+__PACKAGE__->DYOP(
+	[ '#',   'MF::NAME' => undef, \&_fragment ],
+	[ '.',   'MF::NAME' => undef, \&_method   ],
+);
+
+my $pattern = '[_\p{Alpha}][_\p{AlNum}]*';
+my $legal   = qr/^$pattern$/o;
+
+sub _pattern() { $pattern }
 
 sub _value($$)
-{	my ($self, $token, $expr) = @_;
+{	my ($self, $token, $expr, $context) = @_;
+
 }
 
 sub _fragment()
-{	my ($self, $fragment, $expr) = @_;
+{	my ($self, $fragment, $expr, $context) = @_;
 	my $object = $self->value($expr);
 	...
 }
@@ -294,9 +306,11 @@ sub _method()
 	...
 }
 
-__PACKAGE__->DYOP(
-	[ '#',   'MF::NAME' => undef, \&_fragment ],
-	[ '.',   'MF::NAME' => undef, \&_method   ],
-);
+sub validated($$)
+{	my ($class, $name, $where) = @_;
+    $name =~ $legal
+		or error __x"Illegal name '{name}' in '{where}'",
+			name => $name =~ s/[^_\p{AlNum}]/X/gr, where => $where;
+}
 
 1;

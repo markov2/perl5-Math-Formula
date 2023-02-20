@@ -5,6 +5,7 @@ use Test::More;
 
 use_ok 'Math::Formula::Token';
 use_ok 'Math::Formula::Type';
+use_ok 'Math::Formula::Context';
 use_ok 'Math::Formula';
 
 done_testing;
