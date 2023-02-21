@@ -44,7 +44,6 @@ is $date->token, '2023-02-20+0100';
 ### INFIX OPERATORS
 
 my @infix = (
-	[ true  => 'MF::BOOLEAN', '"abc" unlike "*b"' ],
 	[	'2025-02-24T13:28:34+0000',
 		'MF::DATETIME',
 		'2023-02-21T11:28:34 + P2Y3DT2H'

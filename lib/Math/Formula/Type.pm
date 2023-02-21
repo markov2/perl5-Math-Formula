@@ -70,6 +70,18 @@ Represents a truth value, either C<true> or C<false>.
 
 Booleans implement the prefix operator "C<+>", and infix operators 'C<and>',
 'C<or>', and 'C<xor>'.
+
+=examples for booleans
+
+  true    false     # the only two values
+  0                 # will be cast to false in boolean expressions
+  42                # any other value is true, in boolean expressions
+
+  not true        -> BOOLEAN false
+  true and false  -> BOOLEAN false
+  true  or false  -> BOOLEAN true
+  true xor false  -> BOOLEAN true
+
 =cut
 
 package
@@ -80,7 +92,7 @@ use base 'Math::Formula::Type';
 sub prefix($)
 {	my ($self, $op) = @_;
 	if($op eq 'not')
-	{	return MF::BOOLEAN->new(undef, ! $_[0]->value);
+	{	return MF::BOOLEAN->new(undef, ! $self->value);
 	}
 	$self->SUPER::prefix($op);
 }
@@ -112,10 +124,20 @@ double quoted.
 Strings may be cast into regular expressions (MF::REGEXP) when used on the right
 side of a regular expression match operator ('C<=~>' and 'C<!~>').
 
-Strings may be cast into a pattern (MF::PATTERM) when used on the right
+Strings may be cast into a pattern (MF::PATTERN) when used on the right
 of a pattern match operator ('C<like>' and 'C<unlike>').
 
 Besides the four match operators, strings can be concatenated using 'C<~>'.
+
+=examples of strings
+
+  "double quoted string"
+  'single quoted string'   # alternative
+
+  "a" + 'b'           -> STRING  "ab"
+  "a" =~ "regexp"     -> BOOLEAN, see MF::REGEXP
+  "a" like "pattern"  -> BOOLEAN, see MF::PATTERN
+
 =cut
 
 package
@@ -177,6 +199,9 @@ Supported multipliers are
 =item * 1024-based C<kibi>, C<Mibi>, C<Gibi>, C<Tibi>, C<Eibi>, and C<Zibi>;
 =back
 
+The current guaranteed value boundaries are C<±2⁶³> which is about
+9 Zeta, just below C(10¹)>.
+
 Integers can be cast to booleans, where C<0> means C<false> and all other
 numbers are C<true>.
 
@@ -184,7 +209,29 @@ Integers support prefix operators C<+> and C<->.
 
 Integers support infix operators C<+>, C<->, C<*>, C<%> (modulo) which result
 in integers.  Infix operator C</> returns a float.  All numeric comparison operators
-return a boolean.  
+return a boolean.
+
+=examples of integers
+
+  42        # the answer to everything
+  8T        # how my disk was sold to me
+  7451Mibi  # what my system tells me the space is
+  -12       # negatives
+  1_234_567 # _ on the thousands, more readible
+
+  + 2          -> INTEGER   2      # prefix op
+  - 2          -> INTEGER   -2     # prefix op
+  - -2         -> INTEGER   2      # prefix op, negative int
+    
+
+  1 + 2        -> INTEGER   3      # infix op
+  5 - 9        -> INTEGER   -4     # infix op
+  3 * 4        -> INTEGER   12
+  12 % 5       -> INTEGER   2
+  12 / 5       -> FLOAT     2.4
+
+  not 0        -> BOOLEAN   true
+  not 42       -> BOOLEAN   false
 =cut
 
 package
@@ -203,7 +250,7 @@ sub cast($)
 sub prefix($)
 {	my ($self, $op) = @_;
 	  $op eq '+' ? $self
-	: $op eq '-' ? MF::INTEGER->new(undef, - $_[0]->value)
+	: $op eq '-' ? MF::INTEGER->new(undef, - $self->value)
 	: $self->SUPER::prefix($op)
 }
 
@@ -226,6 +273,9 @@ sub infix($$$)
 		MF::FLOAT->new(undef, $self->value / $right->value)
 			if $op eq '/';
 	}
+
+	return $right->infix($op, $self, @_[2..$#_])
+		if $op eq '*' && $right->isa('MF::DURATION');
 
 	$self->cast('MF::FLOAT')->infix(@_)
 		if $right->isa('MF::FLOAT');
@@ -272,6 +322,17 @@ Datetimes can be cast to a time or a date, with loss of information.
 It is possible to add (C<+>) and subtract (C<->) durations from a datetime, which result
 in a new datetime.  When you subtract one datetime from another datetime, the result is
 a duration.
+
+=examples for datetime
+
+  2023-02-18T01:28:12
+  2023-02-18T01:28:12.345
+  2023-02-18T01:28:12+0300
+  2023-02-18T01:28:12.345+0300
+
+  2023-02-21T11:28:34 + P2Y3DT2H -> DATETIME  2025-02-24T13:28:34
+  2023-02-21T11:28:34 - P2Y3DT2H -> DATETIME  2021-02-18T09:28:34
+  2023-02-21T11:28:34 - 2021-02-18T09:28:34 -> DURATION P2Y3DT2H
 =cut
 
 package
@@ -339,7 +400,7 @@ An subtract (C<->) from a date produces a duration.
 You may also add a time to a date, forming a datetime.  Those may be in diffent
 timezones.
 
-=examples
+=examples for date
 
   1966-12-21        # without timezone, default from context
   1966-12-21+0200   # with explicit timezone info
@@ -512,6 +573,18 @@ A sum of 12 months will lead to 1 year, but 40 days will stay 40 days because th
 day length differs per month.  This will only be resolved when the duration is added
 to an actual datetime.
 
+=examples for duration
+
+  P1Y2M5D          # duration one year, 2 months, 5 days
+  PT1M             # mind the "T" before smaller than day values!
+  P3MT5M           # confusing: 3 months + 5 minutes
+  PT3H4M8.2S       # duration 3 hours, 4 minutes, just over 8 seconds
+
+  - -P1Y           # prefix + and =
+  P3Y2M + P1YT3M5S  -> DURATION P4Y2MT3M5S
+  P1Y2MT3H5M - P3Y8MT5H13M14S -> DURATION -P2Y6MT2H8M14S
+  P1DT2H * 4        -> DURATION P4DT8H
+  4 * P1DT2H        -> DURATION P4DT8H
 =cut
 
 package
@@ -519,6 +592,13 @@ package
 
 use base 'Math::Formula::Type';
 use DateTime::Duration ();
+
+sub prefix($)
+{   my ($self, $op, $right) = @_;
+      $op eq '+' ? $self
+    : $op eq '-' ? MF::DURATION->new('-' . $self->token)
+    : $self->SUPER::prefix($op)
+}
 
 sub infix($$@)
 {	my $self = shift;
@@ -540,15 +620,22 @@ sub infix($$@)
 	$self->SUPER::infix(@_);
 }
 
-sub _pattern {
-	'P (?:[0-9]+Y)? (?:[0-9]+M)? (?:[0-9]+D)? (?:T (?:[0-9]+H)? (?:[0-9]+M)? (?:[0-9]+(?:\.[0-9]+)?S)? )? \b';
+sub _pattern { '[+-]? P (?:[0-9]+Y)? (?:[0-9]+M)? (?:[0-9]+D)? '
+               . ' (?:T (?:[0-9]+H)? (?:[0-9]+M)? (?:[0-9]+(?:\.[0-9]+)?S)? )? \b';
 }
 
 use DateTime::Format::Duration::ISO8601 ();
 my $dur_format = DateTime::Format::Duration::ISO8601->new;
+# Implementation dus not like negatives, but DateTime::Duration does.
 
-sub _token($) { $dur_format->format_duration($_[1]) }
-sub _value($) {	$dur_format->parse_duration($_[1])  }
+sub _token($) { ($_[1]->is_negative ? '-' : '') . $dur_format->format_duration($_[1]) }
+
+sub _value($)
+{	my $value    = $_[1];
+	my $negative = $value =~ s/^-//;
+	my $duration = $dur_format->parse_duration($value);
+	$negative ? $duration->multiply(-1) : $duration;
+}
 
 #-----------------
 =section MF::NAME, refers to something in the context
