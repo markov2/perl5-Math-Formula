@@ -8,9 +8,8 @@ package Math::Formula::Token;
 
 sub new(%) { my $class = shift; bless [@_], $class }
 
-sub token  { $_[0][0] //= $_[0]->_token($_[0][1]) }
+sub token  { $_[0][0] //= $_[0]->_token($_[0]->value) }
 sub _token { $_[1] }
-
 
 #-------------------
 =section MF::PARENS, parenthesis tokens
@@ -47,8 +46,8 @@ my %table;
 		[ LTR, ',' ],
 		[ LTR, 'or', 'xor' ],
 		[ LTR, 'and' ],
-		[ LTR, '+', '-' ],
-		[ LTR, '*', '/' ],
+		[ LTR, '+', '-', '~' ],
+		[ LTR, '*', '/', '%' ],
 		[ LTR, '=~', '!~', 'like', 'unlike' ],
 	);
 

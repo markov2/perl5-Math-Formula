@@ -61,21 +61,8 @@ removed, intermediate sequences of blanks shortened to one blank.
 
 sub collapsed($) { $_[0]->token =~ s/\s+/ /gr =~ s/^ //r =~ s/ $//r }
 
-### The following are for internal administration, hence not documented.
-
-my %infix;
-sub INFIX(@)
-{	my $class = shift;
-	while(my $def = shift)
-	{	my ($op, $needs, $becomes, $handler) = @$def;
-		$infix{$op}{$needs} = [ $becomes, $handler ];
-	}
-}
-
-#XXX now, the search with cast() needs to start
-sub prefix { undef }
-
-sub infix { warn "Cannot find operation '$_[1]'" }
+sub prefix { warn "Cannot find prefx operator '$_[1]' on a " . (ref $_[0])  }
+sub infix  { warn "Cannot find infix operator for ". (ref $_[0]) . " $_[1] " . (ref $_[2]) }
 
 #-----------------
 =section MF::BOOLEAN, a thruth value
@@ -147,14 +134,25 @@ sub cast($)
 sub infix($$$)
 {	my $self = shift;
 	my ($op, $right) = @_;
-	my $other = ref $right;
 
-	#if($op eq '~' 
-	#[ '~',      'MF::STRING'  => 'MF::STRING',  sub { $_[0]->value .  $_[1]->value } ],
-	#[ '=~',     'MF::REGEXP'  => 'MF::BOOLEAN', sub { $_[0]->value =~ $_[1]->regexp } ],
-	#[ '!~',     'MF::REGEXP'  => 'MF::BOOLEAN', sub { $_[0]->value !~ $_[1]->regexp } ],
-	#[ 'like',   'MF::PATTERN' => 'MF::BOOLEAN', sub { $_[0]->value =~ $_[2]->regexp } ],
-	#[ 'unlike', 'MF::PATTERN' => 'MF::BOOLEAN', sub { $_[0]->value !~ $_[2]->regexp } ],
+	if($op eq '~')
+	{	my $r = $right->isa('MF::STRING') ? $right : $right->cast('MF::STRING');
+		return MF::STRING->new(undef, $self->value . $r->value) if $r;
+	}
+	elsif($op eq '=~' || $op eq '!~')
+	{	my $r = $right->isa('MF::REGEXP') ? $right : $right->cast('MF::REGEXP');
+		my $v = ! $r ? undef
+			  : $op eq '=~' ? $self->value =~ $r->regexp : $self->value !~ $r->regexp;
+		return MF::BOOLEAN->new(undef, $v // 0) if $r;
+	}
+	elsif($op eq 'like' || $op eq 'unlike')
+	{	my $r = $right->isa('MF::PATTERN') ? $right : $right->cast('MF::PATTERN');
+		my $v = ! $r ? undef
+			  : $op eq 'like' ? $self->value =~ $r->regexp : $self->value !~ $r->regexp;
+		return MF::BOOLEAN->new(undef, $v // 0) if $r;
+	}
+
+	$self->SUPER::infix(@_);
 }
 
 sub _token($) { '"' . ($_[1] =~ s/[\"]/\\$1/gr) . '"' }
@@ -184,8 +182,9 @@ numbers are C<true>.
 
 Integers support prefix operators C<+> and C<->.
 
-Integers support infox operators C<+>, C<->, C<*>, C</>, and all numberic comparison
-operators.
+Integers support infix operators C<+>, C<->, C<*>, C<%> (modulo) which result
+in integers.  Infix operator C</> returns a float.  All numeric comparison operators
+return a boolean.  
 =cut
 
 package
@@ -197,7 +196,7 @@ use Log::Report 'math-formula', import => [ qw/error __x/ ];
 sub cast($)
 {	my ($self, $to) = @_;
 	  $to eq 'MF::BOOLEAN' ? MF::BOOLEAN->new(undef, $_[0]->value == 0 ? 0 : 1)
-#	: $to eq 'MF::FLOAT'   ? MF::FLOAT->new($_[0]->value) }
+	: $to eq 'MF::FLOAT'   ? MF::FLOAT->new(undef, $_[0]->value)
 	: $self->SUPER::cast($to);
 }
 
@@ -208,13 +207,31 @@ sub prefix($)
 	: $self->SUPER::prefix($op)
 }
 
-__PACKAGE__->INFIX(
-	[ '+',   'MF::INTEGER' => 'MF::INTEGER', sub { $_[0]->value  +  $_[1]->value } ],
-	[ '-',   'MF::INTEGER' => 'MF::INTEGER', sub { $_[0]->value  -  $_[1]->value } ],
-	[ '*',   'MF::INTEGER' => 'MF::INTEGER', sub { $_[0]->value  *  $_[1]->value } ],
-	[ '/',   'MF::INTEGER' => 'MF::INTEGER', sub { $_[0]->value  /  $_[1]->value } ],
-	[ '<=>', 'MF::INTEGER' => 'MF::INTEGER', sub { $_[0]->value <=> $_[1]->value } ],
-);
+sub infix($$$)
+{	my $self = shift;
+	my ($op, $right) = @_;
+
+	return $self->cast('MF::BOOLEAN')->infix(@_)
+		if $op eq 'and' || $op eq 'or' || $op eq 'xor';
+
+	if($right->isa('MF::INTEGER'))
+	{   my $v = $op eq '+' ? $self->value + $right->value
+			  : $op eq '-' ? $self->value - $right->value
+			  : $op eq '*' ? $self->value * $right->value
+			  : $op eq '%' ? $self->value % $right->value
+			  : $op eq '<=>' ? $self->value <=> $right->value
+			  : undef;
+		return MF::INTEGER->new(undef, $v) if defined $v;
+
+		MF::FLOAT->new(undef, $self->value / $right->value)
+			if $op eq '/';
+	}
+
+	$self->cast('MF::FLOAT')->infix(@_)
+		if $right->isa('MF::FLOAT');
+
+	$self->SUPER::infix(@_);
+}
 
 my $gibi        = 1024 * 1024 * 1024;
 
@@ -270,11 +287,25 @@ sub cast($)
 	  : $self->SUPER::cast($to);
 }
 
-__PACKAGE__->INFIX(
-	[ '+',   'MF::DURATION' => 'MF::DATETIME', sub { $_[0]->value->clone->add_duration($_[1]->value) } ],
-	[ '-',   'MF::DURATION' => 'MF::DATETIME', sub { $_[0]->value->clone->subtract_duration($_[1]->value) } ],
-	[ '-',   'MF::DATETIME' => 'MF::DURATION', sub { $_[0]->value->clone->subtract_datetime($_[1]->value) } ],
-);
+sub infix($$$@)
+{	my $self = shift;
+	my ($op, $right) = @_;
+
+	if($op eq '+' || $op eq '-')
+	{	my $dt = $self->value->clone;
+		if($right->isa('MF::DURATION'))
+		{	my $v = $op eq '+' ?  $dt->add_duration($right->value) : $dt->subtract_duration($right->value);
+			return MF::DATETIME->new(undef, $v);
+		}
+		if($op eq '-')
+		{	my $r = $right->isa('MF::DATETIME') ? $right : $right->cast('MF::DATETIME');
+			return MF::DURATION->new(undef, $dt->subtract_datetime($right->value));
+		}
+	}
+	$self->SUPER::infix(@_);
+}
+
+sub _token($) { $_[1]->datetime . ($_[1]->time_zone->name =~ s/UTC$/+0000/r) }
 
 sub _value($)
 {	my ($self, $token) = @_;
@@ -301,13 +332,34 @@ This transformation is actually slightly problematic: a date means "anywhere
 during the day, where a datetime is a specific moment.
 
 You may add (C<+>) and subtract (C<->) durations from a date, which result in
-datetimes because the duration may contain day fragments.
+a new date.  Those durations cannot contain a time component.
+
+An subtract (C<->) from a date produces a duration.
+
+You may also add a time to a date, forming a datetime.  Those may be in diffent
+timezones.
+
+=examples
+
+  1966-12-21        # without timezone, default from context
+  1966-12-21+0200   # with explicit timezone info
+
+  2023-02-21+0200 - P3D            -> DATE     2023-02-18+0200
+  2012-03-08+0100 + 06:07:08+0200  -> DATETIME 2012-03-08T06:07:08+0300
+  2023-02-26 - 2023-01-20          -> DURATION P1M6D
+
+  4 + 2000-10-20 -> INTEGER 1974  # parser accident repaired
 =cut
 
 package
 	MF::DATE;
 
 use base 'Math::Formula::Type';
+
+use Log::Report 'math-formula', import => [ qw/error __x/ ];
+
+use DateTime::TimeZone  ();
+use DateTime::TimeZone::OffsetOnly ();
 
 sub _pattern { '[12][0-9]{3} \- (?: 0[1-9] | 1[012] ) \- (?: 0[1-9]|[12][0-9]|3[01])' }
 
@@ -321,20 +373,54 @@ sub cast($)
 	}
 
 	if($to eq 'MF::DATETIME')
-	{	my $v  = $self->token;
-		my $dt = $v =~ /\+/ ? $v =~ s/\+/T00:00:00+/r : $v . 'T00:00:00';
-		return MF::DATETIME->new(undef, $dt)
+	{	my $t  = $self->token;
+		my $dt = $t =~ /\+/ ? $t =~ s/\+/T00:00:00+/r : $t . 'T00:00:00';
+		return MF::DATETIME->new($dt);
 	}
 
 	$self->SUPER::cast($to);
 }
 
-__PACKAGE__->INFIX(
-	[ '+', 'MF::DURATION' => 'MF::DATETIME', sub { ... } ],
-	[ '-', 'MF::DURATION' => 'MF::DATETIME', sub { ... } ],
-);
+sub _sum_tz($$)
+{	my $sum = $_[0]->time_zone->offset_for_datetime + $_[1]->time_zone->offset_for_datetime;
+	my ($sign, $abs) = $sum < 0 ? ('-', -$sum) : ('+', $sum);
+	my $offset = sprintf "%s%02d%02d", $sign, int($abs/3600), $abs % 3600;
+	DateTime::TimeZone::OffsetOnly->new(offset => $offset);
+}
 
-sub _token($) { $_[1]->ymd . $_[1]->time_zone->name }
+sub infix($$@)
+{	my $self = shift;
+	my ($op, $right) = @_;
+
+	if($op eq '+' && $right->isa('MF::TIME'))
+	{	my $l = $self->value;
+		my $r = $right->value;
+		my $v = DateTime->new(year => $l->year, month => $l->month, day => $l->day,
+			hour => $r->hour, minute => $r->minute, second => $r->second,
+			nanosecond => $r->nanosecond, time_zone => _sum_tz($l, $r));
+
+		return MF::DATETIME->new(undef, $v);
+	}
+
+	if($op eq '-' && $right->isa('MF::DATE'))
+	{	return MF::DURATION->new(undef, $self->value->clone->subtract_datetime($right->value));
+	}
+
+	if($op eq '+' || $op eq '-')
+	{	my $r = $right->isa('MF::DURATION') ? $right : $right->case('MF::DURATION');
+		! $r || $r->token !~ m/T.*[1-9]/
+			or error __x"only duration with full days with DATE, found '{value}'",
+				value => $r->token;
+
+		my $dt = $self->value->clone;
+		my $v = $op eq '+' ? $dt->add_duration($right->value) : $dt->subtract_duration($right->value);
+		return MF::DATE->new(undef, $v);
+	}
+
+	$self->SUPER::infix(@_);
+}
+
+sub _token($) { $_[1]->ymd . ($_[1]->time_zone->name =~ s/UTC$/+0000/r) }
 
 sub _value($)
 {	my ($self, $token) = @_;
@@ -353,6 +439,21 @@ sub _value($)
 #-----------------
 =section MF::TIME, a moment during any day
 Usefull to indicate a daily repeating event.  For instance, C<start-backup: 04:00:12>. 
+
+You can add a short duration to a time: when you cross a day boundery, it is still only
+interpreted for the time itself.
+
+=examples for time
+
+  17:00:00+0600 # usually keeping track of time-zone
+  12:00:34      # lunch-time, in context default time-zone
+  23:59:61      # with max leap seconds
+  09:11:11.111  # precise time (upto nanoseconds)
+
+  12:00:34 + PT30M -> TIME 12:30:34   # end of lunch
+  12:00:34 - PT15M -> TIME 11:45:34   # round-up coworkers
+
+  23:40:00 + PT7H  -> TIME 06:40:00   # early rise
 =cut
 
 package
@@ -366,7 +467,7 @@ sub _token($)
 {	my $dt   = $_[1];
 	my $ns   = $dt->nanosecond;
 	my $frac = $ns ? sprintf(".%09d", $dt->nanosecond) =~ s/0+$//r : '';
-	$dt->hms . $frac . $dt->time_zone->name;
+	$dt->hms . $frac . ($dt->time_zone->name =~ s/UTC$/+0000/r);
 }
 
 sub _value($)
@@ -383,18 +484,34 @@ sub _value($)
 	DateTime->new(@args, time_zone => $tz);
 }
 
+sub infix($$@)
+{	my $self = shift;
+	my ($op, $right) = @_;
+
+	if($op eq '+' || $op eq '-')
+	{	if(my $r = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION'))
+	 	{	my $dt = $self->value->clone;
+			my $v  = $op eq '+' ? $dt->add_duration($right->value) : $dt->subtract_duration($right->value);
+			return MF::TIME->new(undef, $v);
+		}
+	}
+
+	$self->SUPER::infix(@_);
+}
+
 #-----------------
 =section MF::DURATION, a period of time
 Durations are usually added to datetimes, and may be negative.  They are formatted in
-ISO8601 standard format.
+ISO8601 standard format, which is a bit akward, to say the least.
 
 Durations can be added (C<+>) together, subtracted (C<->) together,
-or multiplied by an integer factor.
+or multiplied by an integer factor.  The prefix C<+> and C<-> are also supported.
 
 B<Be warned> that operations may not always lead to the expected results.
 A sum of 12 months will lead to 1 year, but 40 days will stay 40 days because the
 day length differs per month.  This will only be resolved when the duration is added
 to an actual datetime.
+
 =cut
 
 package
@@ -403,12 +520,25 @@ package
 use base 'Math::Formula::Type';
 use DateTime::Duration ();
 
-__PACKAGE__->INFIX(
-	[ '+',   'MF::DURATION' => 'MF::DURATION', sub { $_[0]->value->clone->add_duration($_[1]->value) } ],
-	[ '-',   'MF::DURATION' => 'MF::DURATION', sub { $_[0]->value->clone->subtract_duration($_[1]->value) } ],
-	[ '*',   'MF::INTEGER'  => 'MF::DURATION', sub { $_[0]->value->clone->multiply($_[1]->value) } ],
-	# Comparison <=> of durations depends on moment, because normalization is not possible
-);
+sub infix($$@)
+{	my $self = shift;
+	my ($op, $right) = @_;
+
+	if($op eq '+' || $op eq '-')
+	{	my $r  = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION');
+		my $v  = $self->value->clone;
+		my $dt = ! $r ? undef : $op eq '+' ? $v->add_duration($r->value) : $v->subtract_duration($r->value);
+		return MF::DURATION->new(undef, $dt) if $r;
+	}
+	elsif($op eq '*')
+	{	my $r  = $right->isa('MF::INTEGER') ? $right : $right->cast('MF::INTEGER');
+		return MF::DURATION->new(undef, $self->value->clone->multiply($r->value)) if $r;
+	}
+	# Comparison <=> of durations depends on moment, because normalization is not possible:
+	# Translate compare($dt, $d1, $d2) into "dt + d1 <=> dt + d2"
+
+	$self->SUPER::infix(@_);
+}
 
 sub _pattern {
 	'P (?:[0-9]+Y)? (?:[0-9]+M)? (?:[0-9]+D)? (?:T (?:[0-9]+H)? (?:[0-9]+M)? (?:[0-9]+(?:\.[0-9]+)?S)? )? \b';
@@ -495,10 +625,8 @@ sub _method()
 	...
 }
 
-__PACKAGE__->INFIX(
-	[ '#',   'MF::NAME' => undef, \&_fragment ],
-	[ '.',   'MF::NAME' => undef, \&_method   ],
-);
+#	[ '#',   'MF::NAME' => undef, \&_fragment ],
+#	[ '.',   'MF::NAME' => undef, \&_method   ],
 
 
 #-----------------
@@ -563,7 +691,7 @@ sub regexp
 {	my $self = shift;
 	return $self->[2] if defined $self->[2];
 	my $value = $self->value =~ s!/!\\/!gr;
-	$self->[2] = qr/$value/xuo;
+	$self->[2] = qr/$value/xu;
 }
 
 sub _from_string($)

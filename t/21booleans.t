@@ -12,10 +12,14 @@ my $expr = Math::Formula->new(
 	expression => '1',
 );
 
+### PREFIX operators
+
 is_deeply $expr->_tokenize('true'),     [MF::BOOLEAN->new('true')];
 is_deeply $expr->_tokenize('false'),    [MF::BOOLEAN->new('false')];
 
-my @tests = (
+### INFIX operators
+
+my @infix = (
 	# Prefix operators
 	[ false => 'not true'  ],
 	[ true  => 'not false' ],
@@ -31,14 +35,21 @@ my @tests = (
 	[ true  => 'true  or  false' ],
 	[ false => 'false or  false' ],
 
+	[ false => 'true  xor true'  ],
+	[ true  => 'false xor true'  ],
+	[ true  => 'true  xor false' ],
+	[ false => 'false xor false' ],
+
 	[ false => 'false and true or false' ],
 
 	# with cast
 	[ true  => 'true and 1' ],
 	[ false => 'true and 0' ],
+	[ true  => '1 and 1' ],
+	[ false => '0 and 0' ],
 );
 
-foreach (@tests)
+foreach (@infix)
 {	my ($result, $rule) = @$_;
 
 	$expr->_test($rule);

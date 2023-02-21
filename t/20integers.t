@@ -30,6 +30,8 @@ foreach (
 	cmp_ok $i->value, '==', $value;
 }
 
+### CASTing
+
 my $string = MF::INTEGER->new(42)->cast('MF::STRING');
 ok defined $string, 'cast to string';
 isa_ok $string, 'MF::STRING';
@@ -45,6 +47,8 @@ isa_ok $bool2, 'MF::BOOLEAN', 'cast to false';
 is $bool2->value, 0;
 is $bool2->token, 'false';
 
+### PREFIX operators
+
 $expr->_test('+4');
 cmp_ok $expr->evaluate({})->value, '==', 4, 'prefix +';
 
@@ -53,5 +57,30 @@ cmp_ok $expr->evaluate({})->value, '==', -4, 'prefix -';
 
 $expr->_test('+-++--4');
 cmp_ok $expr->evaluate({})->value, '==', -4, 'prefix list';
+
+### INFIX operators
+
+my @infix = (
+	[ true  => 'MF::BOOLEAN' => '42 and true' ],
+	[ true  => 'MF::BOOLEAN' => '43 or false' ],
+	[ true  => 'MF::BOOLEAN' => '44 xor false' ],
+	[ false => 'MF::BOOLEAN' => '45 xor true' ],
+
+	[ 3 => 'MF::INTEGER' => '1 + 2' ],
+	[ 4 => 'MF::INTEGER' => '7 - 3' ],
+	[ 8 => 'MF::INTEGER' => '2 * 4' ],
+	[ 3 => 'MF::INTEGER' => '203 % 10' ],
+
+	#TODO: FLOAT
+);
+
+foreach (@infix)
+{	my ($result, $type, $rule) = @$_;
+
+	$expr->_test($rule);
+	my $eval = $expr->evaluate({});
+	is $eval->token, $result, "$rule -> $result";
+	isa_ok $eval, $type;
+}
 
 done_testing;

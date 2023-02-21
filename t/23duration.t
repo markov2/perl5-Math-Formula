@@ -12,9 +12,13 @@ my $expr = Math::Formula->new(
 	expression => '1',
 );
 
+### TOKENIZING
+
 is_deeply $expr->_tokenize('P1Y'),    [MF::DURATION->new('P1Y')];
 my $long_duration = 'P2Y5M12DT11H45M12.345S';
 is_deeply $expr->_tokenize($long_duration), [MF::DURATION->new($long_duration )];
+
+### PARSING
 
 my $dur1 = MF::DURATION->new('P1Y')->value;
 ok defined $dur1, 'simple parsing';
@@ -30,5 +34,7 @@ is $dur2->seconds, 15;
 
 my $dur3 = MF::DURATION->new(undef, DateTime::Duration->new);
 is $dur3->token, 'PT0H0M0S', 'no duration';
+
+### PREFIX OPERATORS
 
 done_testing;

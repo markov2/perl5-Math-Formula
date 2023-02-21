@@ -15,7 +15,7 @@ WriteMakefile
     , 'DateTime::Format::Duration::ISO8601' => 0,
     }
   , AUTHOR       => 'Mark Overmeer <markov@cpan.org>'
-  , ABSTRACT     => 'Play trics with hash keys'
+  , ABSTRACT     => 'Expressions on steriods'
   , LICENSE      => 'perl_5'
 
   , META_MERGE =>

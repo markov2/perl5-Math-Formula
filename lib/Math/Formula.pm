@@ -65,8 +65,8 @@ my $match_tz    = '[+-] [0-9]{4}';
 my $match_duration = MF::DURATION->_pattern;
 
 my $match_op    = join '|',
-	'[*\/+\-#~.]',
-	qw/=~ !~ <=>/,
+	'[*\/+\-#~.%]',
+	qw/=~ !~ <=> < <= > >= == /,
 	(map "$_\\b", qw/and or not xor like unlike/);
 
 sub _tokenize($)
@@ -190,4 +190,3 @@ sub evaluate($)
 }
 
 1;
-
