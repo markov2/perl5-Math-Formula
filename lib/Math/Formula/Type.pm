@@ -23,21 +23,30 @@ This page describes are Types used by M<Math::Formula>. All parts of an
 expression has a known type, and also the type of the result of an expression
 is known beforehand.
 
+=chapter METHODS
+
 =section Constructors
 
 =cut
 
 #-----------------
-=section Attributes
+=section MF::Formula::Type
 The following attributes are supported for any Type defined on this page.
 
-Any Type can be cast into a MF::STRING.
+=method cast $type
+Type-convert a typed object into an object with a different type.  Sometimes, the 
+represented value changes a little bit, but usually not.
+
+Any Type can be cast into a MF::STRING. Read the documentation for other types to
+see what they offer.
 =cut
 
 sub cast($)
 {	my ($self, $to) = @_;
 	return MF::STRING->new(undef, $self->token)
 		if $to eq 'MF::STRING';
+
+	undef;
 }
 
 
@@ -648,8 +657,24 @@ On the right-side of a fragment indicator C<#> or method indicator C<.>,
 the name will be lookup in the features of the object on the left of that
 operator.
 
-A name which is not right of a C<#> or C<.> can be cast into a object
+A name which is not right of a C<#> or C<.> can be cast into an object
 from the context.
+
+=examples of names
+
+  tic
+  route66
+  the_boss
+  _42       # and '_' works as a character
+  αβΩ       # unicode alpha nums allowed
+
+  7eleven   # not allowed: no start with number
+
+  See "Math::Formula::Context" for the following
+  #frag     # (prefix #) fragment of default object
+  .method   # (prefix .) method on default object
+  name#frag # fragment of object 'name'
+  file.size # method 'size' on object 'file'
 =cut
 
 package
@@ -659,7 +684,7 @@ use base 'Math::Formula::Type';
 use Log::Report 'math-formula', import => [ qw/error __x/ ];
 
 my $pattern = '[_\p{Alpha}][_\p{AlNum}]*';
-my $legal   = qr/^$pattern$/o;
+sub _pattern() { $pattern }
 
 sub cast($)
 {	my ($self, $to, $expr, $context) = @_;
@@ -675,8 +700,6 @@ sub cast($)
 	$self->SUPER::cast($to);
 }
 
-sub _pattern() { $pattern }
-
 =c_method validated $string, $where
 Create a MF::NAME from a $string which needs to be validated for being a valid
 name.  The $where will be used in error messages when the $string is invalid.
@@ -685,7 +708,7 @@ name.  The $where will be used in error messages when the $string is invalid.
 sub validated($$)
 {	my ($class, $name, $where) = @_;
 
-    $name =~ $legal
+    $name =~ qr/^$pattern$/o
 		or error __x"Illegal name '{name}' in '{where}'",
 			name => $name =~ s/[^_\p{AlNum}]/ϴ/gr, where => $where;
 
@@ -725,12 +748,28 @@ to leading dots and '/'.
 Pattern matching constructs are C<*> (zero or more characters), C<?> (any single
 character), and C<[abcA-Z]> (one of a, b, c, or capital), C<[!abc]> (not a, b, or c).
 Besides, it supports curly alternatives like C<*.{jpg,gif,png}>.
+
+=examples of patterns
+
+  "abc" like "b"     -> BOOLEAN false
+  "abc" like "*b*"   -> BOOLEAN false
+  "abc" like "*c"    -> BOOLEAN true
+
+  "abc" unlike "b"   -> BOOLEAN true
+  "abc" unlike "*b*" -> BOOLEAN true
+  "abc" unlike "*c"  -> BOOLEAN false
+
 =cut
 
 package
     MF::PATTERN;
 
 use base 'MF::STRING';
+
+sub _from_string($)
+{	my ($class, $string) = @_;
+	bless $string, $class;
+}
 
 sub _to_regexp($)
 {	my @chars  = $_[0] =~ m/( \\. | . )/gxu;
@@ -753,13 +792,11 @@ sub _to_regexp($)
 	qr/^${regexp}$/u;
 }
 
+=method regexp
+Returns the pattern as compiled regular expression object (qr).
+=cut
+
 sub regexp() { $_[0][2] //= _to_regexp($_[0]->value) }
-
-sub _from_string($)
-{	my ($class, $string) = @_;
-	bless $string, $class;
-}
-
 
 #-----------------
 =section MF::REGEXP, Regular expression
@@ -767,6 +804,13 @@ This type implements regular expressions for the C<=~> and C<!~> operators.
 
 The base of a regular expression is a single or double quote string. When the
 operators are detected, those will automatically be cast into a regexp.
+
+=examples of regular expressions
+
+  "abc" =~ "b"       -> BOOLEAN true
+  "abc" =~ "c$"      -> BOOLEAN true
+  "abc" !~ "b"       -> BOOLEAN false
+  "abc" !~ "c$"      -> BOOLEAN false
 =cut
 
 package
@@ -774,16 +818,20 @@ package
 
 use base 'MF::STRING';
 
+sub _from_string($)
+{	my ($class, $string) = @_;
+	bless $string, $class;
+}
+
+=method regexp
+Returns the regular expression as compiled object (qr).
+=cut
+
 sub regexp
 {	my $self = shift;
 	return $self->[2] if defined $self->[2];
 	my $value = $self->value =~ s!/!\\/!gr;
 	$self->[2] = qr/$value/xu;
-}
-
-sub _from_string($)
-{	my ($class, $string) = @_;
-	bless $string, $class;
 }
 
 1;

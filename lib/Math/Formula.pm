@@ -4,12 +4,10 @@
 # is not always optimally readible when your Perl skills are poor.
 
 package Math::Formula;
-use base 'Exporter';
 
 use warnings;
 use strict;
 use utf8;
-use re 'eval';  #XXX needed with newer than 5.16 perls?
 
 use Log::Report;
 
@@ -19,15 +17,64 @@ use Math::Formula::Type;
 use Data::Dumper;
 $Data::Dumper::Indent = 0;
 
-use constant {
-	# Associativity
-	LTR => 1, RTL => 2, NOCHAIN => 3,
-};
+=chapter NAME
 
-my @associativity = qw/LTR RTL NOCHAIN/;
+Math::Formula - expressions on steriods
 
-our %EXPORT_TAGS = ( associativity => \@associativity );
-our @EXPORT_OK   = ( @associativity );
+=chapter SYNOPSIS
+
+  my $formula = Math::Formula->new(name => 'size', expression => '42k + 324');
+  my $size    = $formula->evaluate($context, expect => 'MF::INTEGER');
+
+Or better
+
+  $context->addFormula(size => '42k + 324');
+  my $size = $context->calculate('size', expect => 'MF::INTEGER');
+
+=chapter DESCRIPTION
+
+B<What makes Math::Formula special?> Many expression evaluators have been written
+in the past.  The application where this module was written for has special needs,
+so this expression evaluator can do things which are usually hidden behind library
+calls.  For instance, where are many types which you can use to calculate directly
+(examples far below on this page)
+
+  true and false               # real booleans
+  "abc"  'abc'                 # the usual strings
+  7  89k  5Mibi                # integers with multiplier support
+  =~ "c$"                      # regular expressions and patterns
+  like "*c"                    # pattern matching
+  2023-02-18T01:28:12+0300     # date-times
+  2023-02-18                   # dates
+  01:18:12                     # times
+  P2Y3DT2H                     # duration
+  system                       # external objects
+
+For instance,
+
+  my-age   = (system.now - 1966-05-04).years
+  is-adult = my-age >= 18
+
+Expressions can refer to values computed by other expressions.  The results are
+cached within the context.
+
+=cut
+
+#--------------------------
+=chapter METHODS
+
+=section Constructors
+
+=c_method new %options
+
+=required name $name
+The expression need a name, to be able to produce desent error messages.
+But also to be able to cache the results in the "Context".  Expressions
+can refer to each other via this name.
+
+=requires expression $expr
+
+=cut
 
 sub new(%) { my ($class, %self) = @_; (bless {}, $class)->init(\%self) }
 
@@ -38,14 +85,33 @@ sub init($)
 	$self;
 }
 
+#--------------------------
+=section Accessors
+
+=method name
+Returns the name of this expression.
+=cut
+
 sub name()       { $_[0]->{MSBE_name} }
+
+=method expression
+Returns the expression string, which was used at creation.
+=cut
+
 sub expression() { $_[0]->{MSBE_expr} }
 
-sub _tree()
+=method tree
+Returns the Abstract Syntax Tree of the expression. Some of the types
+are only determined at run-time, for optimal laziness.
+=cut
+
+sub tree()
 {	my $self = shift;
 	$self->{MSBE_tree} ||= $self->_build_tree($self->_tokenize($self->expression), 0);
 }
 
+# For testing only: to load a new expression without the need to create
+# a new object.
 sub _test($$)
 {	my ($self, $expr) = @_;
 	$self->{MSBE_expr} = $expr;
@@ -73,6 +139,9 @@ sub _tokenize($)
 {	my ($self, $s) = @_;
 	our @t = ();
 	my $parens_open = 0;
+
+	use re 'eval';  #XXX needed with newer than 5.16 perls?
+
 	$s =~ m/ ^
 	(?: \s*
 	  (?| \# (?: \s [^\n\r]+ | $ ) \
@@ -104,11 +173,9 @@ sub _tokenize($)
 	! $parens_open
 		or error __x"expression '{name}', parenthesis do not match", name => $self->name;
 
-#warn Dumper \@t;
 	\@t;
 }
 
-my (%prefix, %infix, %postop);
 sub _build_tree($$)
 {	my ($self, $t, $prio) = @_;
 	return shift @$t if @$t < 2;
@@ -135,7 +202,7 @@ sub _build_tree($$)
 
 			if($op eq '#' || $op eq '.')
 			{	# Fragments and Methods are always infix, but their left-side arg
-				# can be left-out.  As PREOP, they would be RTL but we need LTR
+				# can be left-out.  As PREFIX, they would be RTL but we need LTR
 				unshift @$t, $first;
 				$first = MF::NAME->new($self->defaultObjectName);
 				redo PROGRESS;
@@ -166,7 +233,7 @@ ref $next or warn $next;
 
 		return $first
 			if $next_prio < $prio
-			|| ($next_prio==$prio && $assoc==LTR);
+			|| ($next_prio==$prio && $assoc==MF::OPERATOR::LTR);
 
 		shift @$t;    # apply the operator
 		$first = MF::INFIX->new($op, $first, $self->_build_tree($t, $next_prio));
@@ -176,6 +243,9 @@ ref $next or warn $next;
 
 sub defaultObjectName() { 'unit' }
 
+#--------------------------
+=section Running
+
 =method evaluate $context, [$type]
 Calculate the value for this expression given the $context.  When the expected $type
 is given, the result will be guaranteed of the correct type or C<undef>.
@@ -183,10 +253,41 @@ is given, the result will be guaranteed of the correct type or C<undef>.
 
 sub evaluate($)
 {	my ($self, $context, $expect) = @_;
-	my $result = $self->_tree->_compute($context, $self);
+	my $result = $self->tree->_compute($context, $self);
 
 	# For external evaluation calls, we must follow the request
 	$expect && ! $result->isa($expect) ? $result->cast($expect) : $result;
 }
+
+#--------------------------
+=chapter DETAILS
+
+=section Examples of complex expressions
+
+  birthday: 1966-04-05
+
+  age: (system.now - birthday).years
+  # (DATETIME - DATE = DURATION) attribute 'years'
+
+
+=section Operators
+
+As prefix operator, you can use C<not>, C<->, C<+> on applicable data
+types.  The C<#> (fragment) and C<.> (attributes) prefixes are weird cases:
+see M<Math::Formula::Context>.
+
+The infix operators have the following priorities: (from low to higher,
+each like with equivalent priority)
+
+  LTR   or   xor
+  LTR   and
+  LTR   +    -    ~
+  LTR   *    /    %
+  LTR   =~   !~   like   unlike  # regexps and patterns
+  LTR   #    .                   # fragments and attributes
+
+The first value is a constant representing associativety.  Either the constant
+LTR (compute left to right), RTL (right to left), or NOCHAIN (non-stackable
+operator).
 
 1;
