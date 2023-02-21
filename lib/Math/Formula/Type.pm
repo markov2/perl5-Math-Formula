@@ -75,6 +75,8 @@ sub INFIX(@)
 #XXX now, the search with cast() needs to start
 sub prefix { undef }
 
+sub infix { warn "Cannot find operation '$_[1]'" }
+
 #-----------------
 =section MF::BOOLEAN, a thruth value
 Represents a truth value, either C<true> or C<false>.
@@ -96,13 +98,23 @@ sub prefix($)
 	$self->SUPER::prefix($op);
 }
 
-__PACKAGE__->INFIX(
-	[ 'and', 'MF::BOOLEAN' => 'MF::BOOLEAN', sub { $_[0]->value and $_[1]->value } ],
-	[  'or', 'MF::BOOLEAN' => 'MF::BOOLEAN', sub { $_[0]->value  or $_[1]->value } ],
-	[ 'xor', 'MF::BOOLEAN' => 'MF::BOOLEAN', sub { $_[0]->value xor $_[1]->value } ],
-);
+sub infix($$$)
+{	my $self = shift;
+	my ($op, $right) = @_;
 
-sub _token($) {	$_[1] ? 'true' : 'false' }
+	if(my $r = $right->isa('MF::BOOLEAN') ? $right : $right->cast('MF::BOOLEAN'))
+	{	my $v = $op eq 'and' ? ($self->value and $r->value)
+	  		  : $op eq  'or' ? ($self->value  or $r->value)
+	  		  : $op eq 'xor' ? ($self->value xor $r->value)
+	  		  : undef;
+
+		return MF::BOOLEAN->new(undef, $v) if defined $v;
+	}
+
+	$self->SUPER::infix(@_);
+}
+
+sub _token($) { $_[1] ? 'true' : 'false' }
 sub _value($) { $_[1] eq 'true' }
 
 #-----------------
@@ -132,13 +144,18 @@ sub cast($)
 	: $self->SUPER::cast($to);
 }
 
-__PACKAGE__->INFIX(
-	[ '~',      'MF::STRING'  => 'MF::STRING',  sub { $_[0]->value .  $_[1]->value } ],
-	[ '=~',     'MF::REGEXP'  => 'MF::BOOLEAN', sub { $_[0]->value =~ $_[1]->regexp } ],
-	[ '!~',     'MF::REGEXP'  => 'MF::BOOLEAN', sub { $_[0]->value !~ $_[1]->regexp } ],
-	[ 'like',   'MF::PATTERN' => 'MF::BOOLEAN', sub { $_[0]->value =~ $_[2]->regexp } ],
-	[ 'unlike', 'MF::PATTERN' => 'MF::BOOLEAN', sub { $_[0]->value !~ $_[2]->regexp } ],
-);
+sub infix($$$)
+{	my $self = shift;
+	my ($op, $right) = @_;
+	my $other = ref $right;
+
+	#if($op eq '~' 
+	#[ '~',      'MF::STRING'  => 'MF::STRING',  sub { $_[0]->value .  $_[1]->value } ],
+	#[ '=~',     'MF::REGEXP'  => 'MF::BOOLEAN', sub { $_[0]->value =~ $_[1]->regexp } ],
+	#[ '!~',     'MF::REGEXP'  => 'MF::BOOLEAN', sub { $_[0]->value !~ $_[1]->regexp } ],
+	#[ 'like',   'MF::PATTERN' => 'MF::BOOLEAN', sub { $_[0]->value =~ $_[2]->regexp } ],
+	#[ 'unlike', 'MF::PATTERN' => 'MF::BOOLEAN', sub { $_[0]->value !~ $_[2]->regexp } ],
+}
 
 sub _token($) { '"' . ($_[1] =~ s/[\"]/\\$1/gr) . '"' }
 

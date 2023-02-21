@@ -134,7 +134,7 @@ sub _build_tree($$)
 		{	my $op = $first->token;
 
 			if($op eq '#' || $op eq '.')
-			{	# Fragments and Methods are always dyadic, but their left-side arg
+			{	# Fragments and Methods are always infix, but their left-side arg
 				# can be left-out.  As PREOP, they would be RTL but we need LTR
 				unshift @$t, $first;
 				$first = MF::NAME->new($self->defaultObjectName);
@@ -155,18 +155,14 @@ sub _build_tree($$)
 
 ref $next or warn $next;
 		ref $next eq 'MF::OPERATOR'
-			or error __x"expression '{name}', expected dyadic operator but found '{type}'",
+			or error __x"expression '{name}', expected infix operator but found '{type}'",
 				name => $self->name, type => ref $next;
 
-		my $op   = $next->token;
-		my $infix = $infix{$op}
-			or error __x"expression '{name}', dyadic operator '{op}' not implemented",
+		my $op = $next->token;
+		@$t or error __x"expression '{name}', infix operator '{op}' requires right-hand argument",
 				name => $self->name, op => $op;
 
-		@$t or error __x"expression '{name}', dyadic operator '{op}' requires right-hand argument",
-				name => $self->name, op => $op;
-
-		my ($next_prio, $assoc) = @$infix;
+		my ($next_prio, $assoc) = MF::OPERATOR->find($op);
 
 		return $first
 			if $next_prio < $prio

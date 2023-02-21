@@ -38,8 +38,32 @@ sub operator() { $_[0][0] }
 
 sub _compute { die }  # must be extended
 
+my %table;
+{
+	use constant LTR => 1;  #XXX loading problem issue
+
+	# prefix operators are not needed here
+	my @order = (
+		[ LTR, ',' ],
+		[ LTR, 'or', 'xor' ],
+		[ LTR, 'and' ],
+		[ LTR, '+', '-' ],
+		[ LTR, '*', '/' ],
+		[ LTR, '=~', '!~', 'like', 'unlike' ],
+	);
+
+	my $level;
+	foreach (@order)
+	{	my ($assoc, @line) = @$_;
+		$level++;
+		$table{$_} = [ $level, $assoc ] for @line;
+	}
+}
+
+sub find($) { @{$table{$_[1]}} }
+
 #-------------------
-=section MF::INFIX, infix (dyadic) operator
+=section MF::PREFIX, monadic prefix operator
 Infix operators have two arguments.
 
 =cut
@@ -53,15 +77,15 @@ sub right() { $_[0][1] }
 
 sub _compute($$)
 {	my ($self, $context, $expr) = @_;
-    my $value = $self->right->_compute
+    my $value = $self->right->_compute($context, $expr)
 		or return undef;
 
-	# no prefix op requires $context or $expr yet
+	# no prefix operator needs $context or $expr yet
 	$value->prefix($self->operator);
 }
 
 #-------------------
-=section MF::INFIX,
+=section MF::INFIX, infix (dyadic) operator
 =cut
 
 package
@@ -71,5 +95,17 @@ use base 'MF::OPERATOR';
 
 sub left()  { $_[0][1] }
 sub right() { $_[0][2] }
+
+sub _compute($$)
+{	my ($self, $context, $expr) = @_;
+
+    my $left  = $self->left->_compute($context, $expr)
+		or return undef;
+
+	my $right = $self->right->_compute($context, $expr)
+		or return undef;
+
+	$left->infix($self->operator, $right, $context, $expr);
+}
 
 1;
