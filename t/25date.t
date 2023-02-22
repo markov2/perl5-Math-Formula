@@ -53,14 +53,14 @@ my $node2 = MF::DATE->new('2023-01-01+0200')->cast('MF::DATETIME');
 isa_ok $node2, 'MF::DATETIME', 'cast datetime';
 is $node2->token, '2023-01-01T00:00:00+0200';
 
-my $value1 = $expr->evaluate($context, 'MF::DATE');
+my $value1 = $expr->evaluate($context, expect => 'MF::DATE');
 isa_ok $value1, 'MF::DATE', 'not converted';
 
 my $node3 = MF::DATE->new('2023-01-01')->cast('MF::INTEGER');
 isa_ok $node3, 'MF::INTEGER', 'cast integer to correct';
 is $node3->token, '2021';
 
-my $value2 = $expr->evaluate($context, 'MF::INTEGER');
+my $value2 = $expr->evaluate($context, expect => 'MF::INTEGER');
 isa_ok $value2, 'MF::INTEGER', 'converted to int';
 cmp_ok $value2->value, '==', 2006 -11 -21;
 

@@ -14,7 +14,7 @@ my $context = { };
 sub run($$)
 {   my ($expression, $expect) = @_;
     $expr->_test($expression);
-    $expr->evaluate($context, $expect)->value;
+    $expr->evaluate($context, expect => $expect)->value;
 }
 
 my $run0 = run '1+2', 'MF::INTEGER';

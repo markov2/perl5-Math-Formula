@@ -29,6 +29,8 @@ Or better
   my $size = $context->calc('size', expect => 'MF::INTEGER');
   my $size = $context->value('size');
 
+  my $formula = Math::Formula->new('size', \&own_sub, %options);
+
 =chapter DESCRIPTION
 
 B<What makes Math::Formula special?> Zillions of expression evaluators
@@ -82,7 +84,15 @@ But also to be able to cache the results in the "Context".  Expressions
 can refer to each other via this name.
 
 =requires expression $expression
+The expression is usually a (utf8) string, which will get parsed and
+evaluated on demand.
 
+As special hook,, you may also provide a CODE as $expression.  This will
+be called as
+
+  $expression->($context, $this_formula, %options_to_evaluate);
+
+The expression MUST return any M<Math::Formula::Type> object.
 =cut
 
 sub new(%)
@@ -113,14 +123,14 @@ Returns the expression string, which was used at creation.
 
 sub expression() { $_[0]->{MSBE_expr} }
 
-=method tree
-Returns the Abstract Syntax Tree of the expression. Some of the types
+=method tree $expression
+Returns the Abstract Syntax Tree of the $expression. Some of the types
 are only determined at the first run, for optimal laziness.
 =cut
 
-sub tree()
-{	my $self = shift;
-	$self->{MSBE_ast} ||= $self->_build_ast($self->_tokenize($self->expression), 0);
+sub tree($)
+{	my ($self, $expression) = @_;
+	$self->{MSBE_ast} ||= $self->_build_ast($self->_tokenize($expression), 0);
 }
 
 # For testing only: to load a new expression without the need to create
@@ -264,16 +274,24 @@ ref $next or warn $next;
 #--------------------------
 =section Running
 
-=method evaluate $context, [$type]
-Calculate the value for this expression given the $context.  When the expected $type
-is given, the result will be guaranteed of the correct type or C<undef>.
+=method evaluate $context, %options
+Calculate the value for this expression given the $context.
+
+=option  expect %type
+=default expect <any ::Type>
+When the expected $type is given, the result will be guaranteed of the
+correct type or C<undef>.
 =cut
 
 sub evaluate($)
-{	my ($self, $context, $expect) = @_;
-	my $result = $self->tree->_compute($context, $self);
+{	my ($self, $context, %args) = @_;
+	my $expr   = $self->expression;
+	my $result = ref $expr eq 'CODE'
+	  ? $expr->($context, $self, %args)
+	  : $self->tree($expr)->_compute($context, $self);
 
 	# For external evaluation calls, we must follow the request
+	my $expect = $args{expect};
 	$expect && ! $result->isa($expect) ? $result->cast($expect) : $result;
 }
 

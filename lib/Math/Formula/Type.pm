@@ -396,7 +396,6 @@ sub _value($)
 my %int_attrs = (
    abs => sub { $_[0]->value < 0 ? MF::INTEGER->new(undef, - $_[0]->value) : $_[0] },
 );
-
 sub _attribute($) { $int_attrs{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
 
 #-----------------
