@@ -7,10 +7,7 @@ use utf8;
 use Math::Formula ();
 use Test::More;
 
-my $expr = Math::Formula->new(
-	name       => 'test',
-	expression => '1',
-);
+my $expr = Math::Formula->new(test => 1);
 
 sub tree_for($)
 {	my $string = shift;
@@ -46,11 +43,14 @@ is_deeply $expr->_tokenize('.func1#frag.func2'), [
 ];
 
 is_deeply tree_for('.func1#frag.func2'),
-	MF::PREFIX->new('.',
-		MF::INFIX->new('.',
-			MF::INFIX->new('#', MF::NAME->new('func1'), MF::NAME->new('frag' )),
-			MF::NAME->new('func2'),
-		)
+	MF::INFIX->new('.',
+		MF::INFIX->new('#',
+			MF::INFIX->new('.',
+				MF::NAME->new('context'), MF::NAME->new('func1')
+			),
+			MF::NAME->new('frag')
+		),
+		MF::NAME->new('func2'),
 	);
 
 done_testing;

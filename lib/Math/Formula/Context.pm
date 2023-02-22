@@ -17,20 +17,12 @@ Math::Formula::Context - calculation context
   my $context = Math::Formula::Context->new();
 
   my $object = MF::OBJECT->new('config');
-  $context->changeObject($object);
 
-  my $full   = Math::Formula->new(
-    name       => 'is-full',
-    expression => 'config.count > 1M',
-    returns    => 'MF::BOOLEAN',
-  );
+  my $full   = Math::Formula->new(is_full => 'config.count > 1M');
 
   # single shot
-  my $value  = $full->evaluate($context);
-
-  # This value is cached
-  $context->changeExpression($object, $full);  # at init
-  my $value  = $context->evaluate($object, 'is-full');
+  my $value  = $full->evaluate($context)->value;
+  my $value  = $full->value($context);
 
   # Or even
   $context->newFormula($object, name => ...);
@@ -81,25 +73,14 @@ sub object($)
 	$self->{MFC_objects}{$name};
 }
 
-=method changeObject [OBJECT]
-Set or change an object (C<MF::OBJECT>) in the Context.  When there is already
+=method addObject [OBJECT]
+Add an object (C<MF::OBJECT>) in the Context.  When there is already
 a different object with the same name defined, it will get unused first.
 =cut
 
-sub changeObject($)
+sub addObject($)
 {	my ($self, $object) = @_;
-	my $name    = $object->name;
-	my $objects = $self->{MFC_objects};
-
-	if(my $old = $objects->{$name})
-	{	return if $object==$old;    # no change
-		$self->unuseObject($old);
-	}
-	else
-	{	$objects->{$name} = $object;
-	}
-
-	$self;
+	$self->{MFC_objects}{$object->name} = $object;
 }
 
 =method unuseObject NAME|OBJECT
@@ -114,7 +95,7 @@ sub unuseObject($)
 	  : $which;
 
 	my $objects = $self->{MFC_objects};
-	$self->invalidate(delete $objects->{$name});
+	delete $objects->{$name};
 
 	$self;
 }
@@ -139,30 +120,6 @@ sub config($)
 
 #--------------
 =section Caching
-
-=method invalidate OBJECT
-Remove the cached value of all registed expressions.
-=cut
-
-# $cache = { $object->name => { $expression->name => $value }}
-
-sub invalidate($)
-{	my ($self, $object) = @_;
-	$object or return;
-
-	my $cache = $self->{MFC_cache};
-	delete $cache->{$object->name};
-
-	while(my ($obj_name, $cached) = each %$cache)
-	{	my $object = $self->object($obj_name);
-		foreach my $expr_name (keys %$cached)
-		{	delete $cached->{$expr_name}
-				if $object->expression($expr_name)->usesObject($object);
-		}
-	}
-
-	$self;
-}
 
 =method cached OBJECT, NAME
 Check whether there is a cached value for the expression with NAME in the OBJECT.

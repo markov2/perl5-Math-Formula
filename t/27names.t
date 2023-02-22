@@ -7,10 +7,7 @@ use utf8;
 use Math::Formula ();
 use Test::More;
 
-my $expr = Math::Formula->new(
-	name       => 'test',
-	expression => '1',
-);
+my $expr = Math::Formula->new(test => 1);
 
 is_deeply $expr->_tokenize('mark'),       [ MF::NAME->new('mark') ];
 is_deeply $expr->_tokenize('_mark_42'),   [ MF::NAME->new('_mark_42') ];

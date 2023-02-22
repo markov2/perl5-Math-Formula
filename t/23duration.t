@@ -7,10 +7,7 @@ use utf8;
 use Math::Formula ();
 use Test::More;
 
-my $expr = Math::Formula->new(
-	name       => 'test',
-	expression => '1',
-);
+my $expr = Math::Formula->new(test => 1);
 
 ### TOKENIZING
 

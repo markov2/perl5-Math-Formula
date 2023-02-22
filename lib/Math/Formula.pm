@@ -23,13 +23,14 @@ Math::Formula - expressions on steriods
 
 =chapter SYNOPSIS
 
-  my $formula = Math::Formula->new(name => 'size', expression => '42k + 324');
+  my $formula = Math::Formula->new('size', '42k + 324', %options);
   my $size    = $formula->evaluate($context, expect => 'MF::INTEGER');
 
 Or better
 
-  $context->addFormula(size => '42k + 324');
-  my $size = $context->calculate('size', expect => 'MF::INTEGER');
+  $context->add(size => '42k + 324');
+  my $size = $context->calc('size', expect => 'MF::INTEGER');
+  my $size = $context->value('size');
 
 =chapter DESCRIPTION
 
@@ -49,11 +50,13 @@ calls.  For instance, where are many types which you can use to calculate direct
   01:18:12                     # times
   P2Y3DT2H                     # duration
   system                       # external objects
+  unit#owner                   # fragments (object lookups)
+  file.size                    # attributes
 
 For instance,
 
-  my-age   = (system.now - 1966-05-04).years
-  is-adult = my-age >= 18
+  my_age   = (system.now.date - 1966-05-04).years
+  is_adult = my_age >= 18
 
 Expressions can refer to values computed by other expressions.  The results are
 cached within the context.
@@ -65,23 +68,27 @@ cached within the context.
 
 =section Constructors
 
-=c_method new %options
+=c_method new $name, $expression, %options
 
-=required name $name
+=requires name $name
 The expression need a name, to be able to produce desent error messages.
 But also to be able to cache the results in the "Context".  Expressions
 can refer to each other via this name.
 
-=requires expression $expr
+=requires expression $expression
 
 =cut
 
-sub new(%) { my ($class, %self) = @_; (bless {}, $class)->init(\%self) }
+sub new(%)
+{	my ($class, $name, $expr, %self) = @_;
+	$self{name} = $name;
+	$self{expr} = $expr;
+	(bless {}, $class)->init(\%self) }
 
 sub init($)
 {	my ($self, $args) = @_;
-	$self->{MSBE_name} = $args->{name} or panic;
-	$self->{MSBE_expr} = my $expr = $args->{expression} or panic;
+	$self->{MSBE_name} = $args->{name};
+	$self->{MSBE_expr} = $args->{expr};
 	$self;
 }
 
@@ -204,7 +211,7 @@ sub _build_tree($$)
 			{	# Fragments and Methods are always infix, but their left-side arg
 				# can be left-out.  As PREFIX, they would be RTL but we need LTR
 				unshift @$t, $first;
-				$first = MF::NAME->new($self->defaultObjectName);
+				$first = MF::NAME->new('context');
 				redo PROGRESS;
 			}
 
@@ -241,8 +248,6 @@ ref $next or warn $next;
 	}
 }
 
-sub defaultObjectName() { 'unit' }
-
 #--------------------------
 =section Running
 
@@ -262,13 +267,22 @@ sub evaluate($)
 #--------------------------
 =chapter DETAILS
 
-=section Examples of complex expressions
+=section Formulas
 
-  birthday: 1966-04-05
+=subsection explaining types
 
-  age: (system.now - birthday).years
-  # (DATETIME - DATE = DURATION) attribute 'years'
+Let's start with a large group of related formulas, and the types they produce:
 
+  birthday: 1966-04-05      # DATE
+  os_lib: #system           # external OBJECT
+  now: os_lib.now           # DATETIME 'now' is an attribute of system
+  today: now.date           # DATE 'date' is an attribute of DATETIME
+  alive: today - birthday   # DURATION
+  age: alive.years          # INTEGER 'years' is an attr of DURATION
+
+This can also be written in one line:
+
+  age: (#system.now.date - 1966-04-05).years
 
 =section Operators
 
@@ -289,5 +303,7 @@ each like with equivalent priority)
 The first value is a constant representing associativety.  Either the constant
 LTR (compute left to right), RTL (right to left), or NOCHAIN (non-stackable
 operator).
+
+=cut
 
 1;

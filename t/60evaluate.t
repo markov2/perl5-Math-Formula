@@ -7,17 +7,14 @@ use utf8;
 use Math::Formula ();
 use Test::More;
 
-my $expr = Math::Formula->new(
-	name       => 'test',
-	expression => '1',
-);
+my $expr = Math::Formula->new(test => 1);
 
 my $context = { };
 
 sub run($$)
 {   my ($expression, $expect) = @_;
     $expr->_test($expression);
-    $expr->evaluate($context, $expect);
+    $expr->evaluate($context, $expect)->value;
 }
 
 my $run0 = run '1+2', 'MF::INTEGER';

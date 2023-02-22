@@ -10,10 +10,7 @@ use Test::More;
 use DateTime;
 use DateTime::TimeZone::OffsetOnly ();
 
-my $expr = Math::Formula->new(
-	name       => 'test',
-	expression => '1',
-);
+my $expr = Math::Formula->new(test => 1);
 
 ### PARSING
 

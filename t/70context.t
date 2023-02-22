@@ -8,10 +8,7 @@ use Math::Formula          ();
 use Math::Formula::Context ();
 use Test::More;
 
-my $expr = Math::Formula->new(
-	name       => 'test',
-	expression => '1',
-);
+my $expr = Math::Formula->new(test => 1);
 
 ### First try empty context
 
