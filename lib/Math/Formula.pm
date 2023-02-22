@@ -130,6 +130,7 @@ sub _test($$)
 ###
 
 my $multipliers = MF::INTEGER->_multipliers;
+my $match_float = MF::FLOAT->_pattern;
 my $match_name  = MF::NAME->_pattern;
 my $match_date  = MF::DATE->_pattern;
 my $match_time  = MF::TIME->_pattern;
@@ -167,6 +168,7 @@ sub _tokenize($)
 							(?{ push @t, MF::DATE->new($+) })
 		| ( $match_time (?: $match_tz )? )
 							(?{ push @t, MF::TIME->new($+) })
+		| ( $match_float )	(?{ push @t, MF::FLOAT->new($+) })
 		| ( [0-9][0-9_]*(?:$multipliers)? )
 							(?{ push @t, MF::INTEGER->new($+) })
 		| \(				(?{ push @t, MF::PARENS->new('(', ++$parens_open) })

@@ -282,24 +282,21 @@ sub infix($$$)
 	return $self->cast('MF::BOOLEAN')->infix(@_)
 		if $op eq 'and' || $op eq 'or' || $op eq 'xor';
 
-	if($right->isa('MF::INTEGER'))
+	if($right->isa('MF::INTEGER') || $right->isa('MF::FLOAT'))
 	{   my $v = $op eq '+' ? $self->value + $right->value
 			  : $op eq '-' ? $self->value - $right->value
 			  : $op eq '*' ? $self->value * $right->value
 			  : $op eq '%' ? $self->value % $right->value
 			  : $op eq '<=>' ? $self->value <=> $right->value
 			  : undef;
-		return MF::INTEGER->new(undef, $v) if defined $v;
+		return ref($right)->new(undef, $v) if defined $v;
 
-		MF::FLOAT->new(undef, $self->value / $right->value)
+		return MF::FLOAT->new(undef, $self->value / $right->value)
 			if $op eq '/';
 	}
 
 	return $right->infix($op, $self, @_[2..$#_])
 		if $op eq '*' && $right->isa('MF::DURATION');
-
-	$self->cast('MF::FLOAT')->infix(@_)
-		if $right->isa('MF::FLOAT');
 
 	$self->SUPER::infix(@_);
 }
@@ -316,13 +313,77 @@ my %multipliers = (
 );
 
 sub _value($)
-{	my ($self, $value) = @_;
-
-	my ($v, $m) = $value =~ m/^ ( [0-9]+ (?: _[0-9][0-9][0-9] )* ) ($multipliers)? $/x
+{	my ($v, $m) = $_[1] =~ m/^ ( [0-9]+ (?: _[0-9][0-9][0-9] )* ) ($multipliers)? $/x
 		or error __x"illegal number format for '{string}'", string => $_[1];
 
 	($1 =~ s/_//gr) * ($2 ? $multipliers{$2} : 1);
 }
+
+#-----------------
+=section MF::FLOAT, floating-point numbers
+Floating point numbers.  Only a limited set of floating point syntaxes is permitted, see
+examples.  Especially: a float SHALL contain a dot or 'e'.  When it contains a dot, there
+must be a digit on both sides.
+
+Floats support prefix operators C<+> and C<->.
+
+Floats support infix operators C<+>, C<->, C<*>, C<%> (modulo), and C</> which result
+in floats.  All numeric comparison operators return a boolean.
+
+=examples of floats
+
+  0.0        # leading zero obligatory
+  0e+0
+  0.1234
+  3e+10
+  -12.345
+
+=cut
+
+package
+	MF::FLOAT;
+
+use base 'Math::Formula::Type';
+use POSIX  qw/floor/;
+
+sub _pattern { '[0-9]+ (?: \.[0-9]+ (?: e [+-][0-9]+ )? | e [+-][0-9]+ )' }
+
+sub cast($)
+{	my ($self, $to) = @_;
+	  $to eq 'MF::INTEGER' ? MF::INTEGER->new(undef, floor($_[0]->value))
+	: $self->SUPER::cast($to);
+}
+
+sub prefix($)
+{	my ($self, $op) = @_;
+	  $op eq '+' ? $self
+	: $op eq '-' ? MF::FLOAT->new(undef, - $self->value)
+	: $self->SUPER::prefix($op)
+}
+
+sub infix($$$)
+{	my $self = shift;
+	my ($op, $right) = @_;
+
+	return $self->cast('MF::BOOLEAN')->infix(@_)
+		if $op eq 'and' || $op eq 'or' || $op eq 'xor';
+
+	if($right->isa('MF::FLOAT') || $right->isa('MF::INTEGER'))
+	{	# Perl will upgrade the integers
+		my $v = $op eq '+' ? $self->value + $right->value
+			  : $op eq '-' ? $self->value - $right->value
+			  : $op eq '*' ? $self->value * $right->value
+			  : $op eq '%' ? $self->value % $right->value
+			  : $op eq '/' ? $self->value / $right->value
+			  : $op eq '<=>' ? $self->value <=> $right->value
+			  : undef;
+		return MF::FLOAT->new(undef, $v) if defined $v;
+	}
+	$self->SUPER::infix(@_);
+}
+
+sub _value($) { $_[1] + 0.0 }
+sub _token($) { my $t = sprintf '%g', $_[1]; $t =~ /[e.]/ ?  $t : "$t.0" }
 
 #-----------------
 =section MF::DATETIME, refers to a moment of time

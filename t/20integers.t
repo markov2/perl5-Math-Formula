@@ -68,7 +68,13 @@ my @infix = (
 	[ 8 => 'MF::INTEGER' => '2 * 4' ],
 	[ 3 => 'MF::INTEGER' => '203 % 10' ],
 
-	#TODO: FLOAT
+	[ '7.0' => 'MF::FLOAT' => '21 / 3' ],
+	[ '3.0' => 'MF::FLOAT' => '1 + 2.0' ],
+	[ '4.0' => 'MF::FLOAT' => '7 - 3.0' ],
+	[ '8.0' => 'MF::FLOAT' => '2 * 4.0' ],
+	[ '3.0' => 'MF::FLOAT' => '203 % 10.0' ],
+
+	#TODO: Comparison
 );
 
 foreach (@infix)
