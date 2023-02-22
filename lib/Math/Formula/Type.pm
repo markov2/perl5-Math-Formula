@@ -4,6 +4,8 @@ use strict;
 package Math::Formula::Type;
 use base 'Math::Formula::Token';
 
+use Log::Report 'math-formula', import => [ qw/error __x/ ];
+
 # Object is an ARRAY. The first element is the token, as read from the formula
 # or constructed from a computed value.  The second is a value, which can be
 # used in computation.  More elements are type specific.
@@ -37,7 +39,16 @@ you MUST provide a $value.  The token will be generated on request.
 
 #-----------------
 =section MF::Formula::Type
-The following attributes are supported for any Type defined on this page.
+The following methods and features are supported for any Type defined on this page.
+
+All types can be converted into a string:
+
+  "a" ~ 2          -> STRING "a2"
+
+All types may provide B<attributes> (calls) for objects of that type.  Those
+get inherited (of course).  For instance:
+
+   02:03:04.hour   -> INTEGER 2
 
 =method cast $type
 Type-convert a typed object into an object with a different type.  Sometimes, the 
@@ -82,8 +93,32 @@ removed, intermediate sequences of blanks shortened to one blank.
 
 sub collapsed($) { $_[0]->token =~ s/\s+/ /gr =~ s/^ //r =~ s/ $//r }
 
-sub prefix { warn "Cannot find prefx operator '$_[1]' on a " . (ref $_[0])  }
-sub infix  { warn "Cannot find infix operator for ". (ref $_[0]) . " $_[1] " . (ref $_[2]) }
+sub prefix
+{   my ($self, $op, $child) = @_;
+
+	error __x"cannot find prefx operator '{op}' on a ({child})",
+		op => $op, child => $child;
+}
+
+sub _attribute { warn "Cannot find attribute $_[1] for ".(ref $_[0]) }
+
+sub infix($@)
+{   my $self = shift;
+	my ($op, $right) = @_;
+
+	if($op eq '.' && $right->isa('MF::NAME'))
+	{	if(my $attr = $self->_attribute($right->token))
+		{	return $attr->($self, @_);
+		}
+	}
+
+	# object used as string
+	return $self->cast('MF::STRING')->infix(@_)
+		if $op eq '~';
+
+	error __x"cannot find infix operator '{op}' for ({left} -> {right})",
+		op => $op, left => ref $self, right => ref $right;
+}
 
 #-----------------
 =section MF::BOOLEAN, a thruth value
@@ -673,7 +708,7 @@ package
 
 use base 'Math::Formula::Type';
 
-sub _pattern { '(?:[01][0-9]|2[0-3]) \: [0-5][0-9] \: (?:[0-5][0-9]|6[01]) (?:\.[0-9]+)?' }
+sub _pattern { '(?:[01][0-9]|2[0-3]) \: [0-5][0-9] \: (?:[0-5][0-9]) (?:\.[0-9]+)?' }
 
 sub _token($)
 {	my $dt   = $_[1];
@@ -684,19 +719,27 @@ sub _token($)
 
 sub _value($)
 {	my ($self, $token) = @_;
-	$token =~ m/^
-		([01][0-9]|2[0-3]) \: ([0-5][0-9]) \: ([0-5][0-9]|6[01]) (?:\.([0-9]+))?
-		([+-] [0-9]{4})?
-	$ /x or return;
+	$token =~ m/^ ([01][0-9]|2[0-3]) \: ([0-5][0-9]) \: ([0-5][0-9]) (?:(\.[0-9]+))? ([+-][0-9]{4})? $/x
+		or return;
 
 	my $tz_offset = $5 // '+0000';  # careful with named matches :-(
 
 	# DateTime requires a year
-	my @args = (year => 2000, hour => $1, minute => $2, second => $3, nanosecond => ($4 //0) * 1_000_000_000);
+	my @args = (year => 2000, month => 1, day => 1, hour => $1, minute => $2, second => $3, nanosecond => ($4 //0) * 1_000_000_000);
 	my $tz = DateTime::TimeZone::OffsetOnly->new(offset => $tz_offset // '+0000');
 
 	DateTime->new(@args, time_zone => $tz);
 }
+
+my %attributes = (
+   hour     => sub { MF::INTEGER->new(undef, $_[0]->value->hour)  },
+   minute   => sub { MF::INTEGER->new(undef, $_[0]->value->minute) },
+   second   => sub { MF::INTEGER->new(undef, $_[0]->value->second) },
+   fracsec  => sub { MF::FLOAT  ->new(undef, $_[0]->value->fractional_second) },
+   tz       => sub { MF::STRING ->new(undef, $_[0]->value->time_zone->name) },
+);
+
+sub _attribute($) { $attributes{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
 
 sub infix($$@)
 {	my $self = shift;

@@ -14,9 +14,6 @@ use Log::Report;
 use Math::Formula::Token;
 use Math::Formula::Type;
 
-use Data::Dumper;
-$Data::Dumper::Indent = 0;
-
 =chapter NAME
 
 Math::Formula - expressions on steriods
@@ -34,10 +31,12 @@ Or better
 
 =chapter DESCRIPTION
 
-B<What makes Math::Formula special?> Many expression evaluators have been written
-in the past.  The application where this module was written for has special needs,
-so this expression evaluator can do things which are usually hidden behind library
-calls.  For instance, where are many types which you can use to calculate directly
+B<What makes Math::Formula special?> Zillions of expression evaluators
+have been written in the past.  The application where this module was
+written for has special needs.  Thereefore, this expression evaluator can
+do things which are usually hidden behind library calls.
+
+For instance, where are many types which you can use to calculate directly
 (examples far below on this page)
 
   true and false               # real booleans
@@ -52,14 +51,21 @@ calls.  For instance, where are many types which you can use to calculate direct
   system                       # external objects
   unit#owner                   # fragments (object lookups)
   file.size                    # attributes
+  (1 + 2) * 3                  # parenthesis
 
-For instance,
+With this, your expressions can look like this:
 
   my_age   = (system.now.date - 1966-05-04).years
   is_adult = my_age >= 18
 
 Expressions can refer to values computed by other expressions.  The results are
-cached within the context.
+cached within the context.  Also, external objects can maintain libraries of
+formulas or produce compatible data.
+
+B<Why do I need it?> My application has many kinds of configurable
+rules, often with dates and durations in it, to arrange processing.
+Instead of fixed, processed values in my configuration, each line can
+now be a smart expression.  Declarative programming.
 
 =cut
 
@@ -109,12 +115,12 @@ sub expression() { $_[0]->{MSBE_expr} }
 
 =method tree
 Returns the Abstract Syntax Tree of the expression. Some of the types
-are only determined at run-time, for optimal laziness.
+are only determined at the first run, for optimal laziness.
 =cut
 
 sub tree()
 {	my $self = shift;
-	$self->{MSBE_tree} ||= $self->_build_tree($self->_tokenize($self->expression), 0);
+	$self->{MSBE_ast} ||= $self->_build_ast($self->_tokenize($self->expression), 0);
 }
 
 # For testing only: to load a new expression without the need to create
@@ -122,7 +128,7 @@ sub tree()
 sub _test($$)
 {	my ($self, $expr) = @_;
 	$self->{MSBE_expr} = $expr;
-	delete $self->{MSBE_tree};
+	delete $self->{MSBE_ast};
 }
 
 ###
@@ -134,7 +140,7 @@ my $match_float = MF::FLOAT->_pattern;
 my $match_name  = MF::NAME->_pattern;
 my $match_date  = MF::DATE->_pattern;
 my $match_time  = MF::TIME->_pattern;
-my $match_tz    = '[+-] [0-9]{4}';
+my $match_tz    = '[+-][0-9]{4}';
 
 my $match_duration = MF::DURATION->_pattern;
 
@@ -190,7 +196,7 @@ sub _tokenize($)
 	\@t;
 }
 
-sub _build_tree($$)
+sub _build_ast($$)
 {	my ($self, $t, $prio) = @_;
 	return shift @$t if @$t < 2;
 
@@ -207,7 +213,7 @@ sub _build_tree($$)
 			{	last if $node->isa('MF::PARENS') && $node->level==$level;
 				push @nodes, $node;
 			}
-			$first = $self->_build_tree(\@nodes, 0);
+			$first = $self->_build_ast(\@nodes, 0);
 			redo PROGRESS;
 		}
 
@@ -222,7 +228,7 @@ sub _build_tree($$)
 				redo PROGRESS;
 			}
 
-			my $next  = $self->_build_tree($t, $prio)
+			my $next  = $self->_build_ast($t, $prio)
 				or error __x"expression '{name}', monadic '{op}' not followed by anything useful",
 				    name => $self->name, op => $op;
 #warn "HERE";
@@ -250,7 +256,7 @@ ref $next or warn $next;
 			|| ($next_prio==$prio && $assoc==MF::OPERATOR::LTR);
 
 		shift @$t;    # apply the operator
-		$first = MF::INFIX->new($op, $first, $self->_build_tree($t, $next_prio));
+		$first = MF::INFIX->new($op, $first, $self->_build_ast($t, $next_prio));
 		redo PROGRESS;
 	}
 }
@@ -287,17 +293,32 @@ Let's start with a large group of related formulas, and the types they produce:
   alive: today - birthday   # DURATION
   age: alive.years          # INTEGER 'years' is an attr of DURATION
 
-This can also be written in one line:
+  # this can also be written in one line:
 
   age: (#system.now.date - 1966-04-05).years
 
+Or some backup configuration lines:
+
+  backup_needed: #system.now.day_of_week <= 5    # Monday = 1
+  backup_start: 23:00:00
+  backup_max_duration: PT2H30M
+  backup_dir: "/var/tmp/backups"
+  backup_name: backup_dir ~ '/' ~ "backup-" ~ weekday ~ ".tgz"
+
+The application which uses this configuration, will run the expressions with
+the names has listed.  It may also provide some own formulas, fragments, and
+helper methods.
+
 =section Operators
 
-As prefix operator, you can use C<not>, C<->, C<+> on applicable data
+As B<prefix> operator, you can use C<not>, C<->, C<+> on applicable data
 types.  The C<#> (fragment) and C<.> (attributes) prefixes are weird cases:
 see M<Math::Formula::Context>.
 
-The infix operators have the following priorities: (from low to higher,
+Operators work on explicit data types.
+Of course, you can use parenthesis for grouping.
+
+The B<infix> operators have the following priorities: (from low to higher,
 each like with equivalent priority)
 
   LTR       or   xor

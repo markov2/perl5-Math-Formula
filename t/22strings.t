@@ -40,6 +40,8 @@ is $r3->regexp .'', '(?^u:^ab.*c$)';
 
 my @infix = (
 	[ '"ab"', 'MF::STRING', '"a" ~ \'b\'' ],
+	[ '"a2"', 'MF::STRING', '"a" ~ 2' ],
+	[ '"2a"', 'MF::STRING', '2 ~ "a"' ],
 
 	[ true  => 'MF::BOOLEAN', '"abc" =~ "b"' ],
 	[ false => 'MF::BOOLEAN', '"abc" =~ "d"' ],

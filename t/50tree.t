@@ -12,7 +12,7 @@ my $expr = Math::Formula->new(test => 1);
 sub tree_for($)
 {	my $string = shift;
 	my $parsed = $expr->_tokenize($string);
-	my $tree   = $expr->_build_tree($parsed, 0);
+	my $tree   = $expr->_build_ast($parsed, 0);
 	$tree;
 }
 
