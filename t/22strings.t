@@ -58,7 +58,14 @@ my @infix = (
 	[  1    => 'MF::INTEGER', '"c" cmp "b"' ],
 );
 
-foreach (@infix)
+### ATTRIBUTES
+
+my @attrs = (
+	[  5       => 'MF::INTEGER', '"abcde".length' ],
+	[  '"abc"' => 'MF::STRING',  '"ABC".lower' ],
+);
+
+foreach (@infix, @attrs)
 {	my ($result, $type, $rule) = @$_;
 
 	$expr->_test($rule);
@@ -66,5 +73,8 @@ foreach (@infix)
 	is $eval->token, $result, "$rule -> $result";
 	isa_ok $eval, $type;
 }
+
+
+
 
 done_testing;

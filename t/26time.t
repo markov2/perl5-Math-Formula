@@ -56,7 +56,25 @@ my @infix = (
 	[ '06:40:00+0000', 'MF::TIME', '23:40:00 + PT7H'  ],
 );
 
-foreach (@infix)
+### ATTRIBUTES
+
+my $time = '02:03:04.5678+0910';
+my $node3 = MF::TIME->new($time);
+is_deeply $node3->_attribute('hour')->($node3),    MF::INTEGER->new(undef, 2), 'hour';
+is_deeply $node3->_attribute('minute')->($node3),  MF::INTEGER->new(undef, 3), 'minute';
+is_deeply $node3->_attribute('second')->($node3),  MF::INTEGER->new(undef, 4), 'second';
+is_deeply $node3->_attribute('fracsec')->($node3), MF::FLOAT  ->new(undef, 4.5678), 'fracsec';
+is_deeply $node3->_attribute('tz')->($node3),      MF::STRING ->new(undef, '+0910'), 'time-zone';
+
+my @attrs = (
+	[ 2,      'MF::INTEGER', "$time.hour"    ],
+	[ 3,      'MF::INTEGER', "$time.minute"  ],
+	[ 4,      'MF::INTEGER', "$time.second"  ],
+	[ 4.5678, 'MF::FLOAT',   "$time.fracsec" ],
+	[ '"+0910"', 'MF::STRING', "$time.tz"    ],
+);
+
+foreach (@infix, @attrs)
 {	my ($result, $type, $rule) = @$_;
 
 	$expr->_test($rule);
@@ -64,14 +82,5 @@ foreach (@infix)
 	is $eval->token, $result, "$rule -> $result";
 	isa_ok $eval, $type;
 }
-
-### ATTRIBUTES
-
-my $node3 = MF::TIME->new('02:03:04.5678+0910');
-is_deeply $node3->_attribute('hour')->($node3),    MF::INTEGER->new(undef, 2), 'hour';
-is_deeply $node3->_attribute('minute')->($node3),  MF::INTEGER->new(undef, 3), 'minute';
-is_deeply $node3->_attribute('second')->($node3),  MF::INTEGER->new(undef, 4), 'second';
-is_deeply $node3->_attribute('fracsec')->($node3), MF::FLOAT  ->new(undef, 4.5678), 'fracsec';
-is_deeply $node3->_attribute('tz')->($node3),      MF::STRING ->new(undef, '+0910'), 'time-zone';
 
 done_testing;

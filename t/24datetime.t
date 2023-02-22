@@ -65,7 +65,21 @@ my @infix = (
 	[  1, 'MF::INTEGER', '2025-02-22T09:28:34    <=> 2023-02-21' ],
 );
 
-foreach (@infix)
+### ATTRIBUTES
+
+my $dt    = '2006-11-21T02:03:04.5678+0910';
+my @attrs = (
+	[ 2006,      'MF::INTEGER', "$dt.year"    ],
+	[ 11,        'MF::INTEGER', "$dt.month"   ],
+	[ 21,        'MF::INTEGER', "$dt.day"     ],
+	[ 2,         'MF::INTEGER', "$dt.hour"    ],
+	[ 3,         'MF::INTEGER', "$dt.minute"  ],
+	[ 4,         'MF::INTEGER', "$dt.second"  ],
+	[ 4.5678,    'MF::FLOAT',   "$dt.fracsec" ],
+	[ '"+0910"', 'MF::STRING',  "$dt.tz"      ],
+);
+
+foreach (@infix, @attrs)
 {	my ($result, $type, $rule) = @$_;
 
 	$expr->_test($rule);

@@ -11,6 +11,8 @@ my $expr = Math::Formula->new(test => 1);
 
 is_deeply $expr->_tokenize('48'), [ MF::INTEGER->new('48') ];
 
+### PARSING
+
 foreach (
 	[ '42'          => 42          ],
 	[ '43k'         => 43_000      ],
@@ -27,7 +29,7 @@ foreach (
 	cmp_ok $i->value, '==', $value;
 }
 
-### CASTing
+### CASTING
 
 my $string = MF::INTEGER->new(42)->cast('MF::STRING');
 ok defined $string, 'cast to string';
@@ -83,7 +85,14 @@ my @infix = (
 	[  1 => 'MF::INTEGER' => '3 <=> 2.0' ],
 );
 
-foreach (@infix)
+### ATTRIBUTES
+
+my @attrs = (
+	[ 3 => 'MF::INTEGER' => '(-3).abs' ],
+	[ 4 => 'MF::INTEGER' => '4.abs' ],
+);
+
+foreach (@infix, @attrs)
 {	my ($result, $type, $rule) = @$_;
 
 	$expr->_test($rule);

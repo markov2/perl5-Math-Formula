@@ -1,5 +1,6 @@
 use warnings;
 use strict;
+use v5.16;  # fc
 
 package Math::Formula::Type;
 use base 'Math::Formula::Token';
@@ -201,6 +202,11 @@ utf8 sorting.
 
   "a" gt "b"          -> BOOLEAN
   "a" cmp "b"         -> INTEGER -1, 0, 1
+
+Attributes:
+
+   "abc".length       -> INTEGER  3
+   "ABC".lower        -> STRING "abc", lower-case using utf8 folding
 =cut
 
 package
@@ -210,6 +216,16 @@ use base 'Math::Formula::Type';
 
 use Unicode::Collate ();
 my $collate = Unicode::Collate->new;  #XXX which options do we need?
+
+sub _token($) { '"' . ($_[1] =~ s/[\"]/\\$1/gr) . '"' }
+
+sub _value($)
+{	my $token = $_[1];
+
+	  substr($token, 0, 1) eq '"' ? $token =~ s/^"//r =~ s/"$//r =~ s/\\([\\"])/$1/gr
+	: substr($token, 0, 1) eq "'" ? $token =~ s/^'//r =~ s/'$//r =~ s/\\([\\'])/$1/gr
+	: $token;  # from code
+}
 
 sub cast($)
 {	my ($self, $to) = @_;
@@ -247,15 +263,12 @@ sub infix($$$)
 	$self->SUPER::infix(@_);
 }
 
-sub _token($) { '"' . ($_[1] =~ s/[\"]/\\$1/gr) . '"' }
+my %string_attrs = (
+   length   => sub { MF::INTEGER->new(undef, length($_[0]->value))  },
+   lower    => sub { MF::STRING->new(undef, fc($_[0]->value)) },
+);
 
-sub _value($)
-{	my $token = $_[1];
-
-	  substr($token, 0, 1) eq '"' ? $token =~ s/^"//r =~ s/"$//r =~ s/\\([\\"])/$1/gr
-	: substr($token, 0, 1) eq "'" ? $token =~ s/^'//r =~ s/'$//r =~ s/\\([\\'])/$1/gr
-	: $token;  # from code
-}
+sub _attribute($) { $string_attrs{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
 
 #-----------------
 =section MF::INTEGER, a long whole number
@@ -296,7 +309,6 @@ with floats.
   - 2          -> INTEGER   -2     # prefix op
   - -2         -> INTEGER   2      # prefix op, negative int
     
-
   1 + 2        -> INTEGER   3      # infix op
   5 - 9        -> INTEGER   -4     # infix op
   3 * 4        -> INTEGER   12
@@ -308,6 +320,11 @@ with floats.
 
   not 0        -> BOOLEAN   true
   not 42       -> BOOLEAN   false
+
+Attributes
+
+  (-3).abs     -> INTEGER   3      # -3.abs == -(3.abs)
+
 =cut
 
 package
@@ -376,6 +393,12 @@ sub _value($)
 	($1 =~ s/_//gr) * ($2 ? $multipliers{$2} : 1);
 }
 
+my %int_attrs = (
+   abs => sub { $_[0]->value < 0 ? MF::INTEGER->new(undef, - $_[0]->value) : $_[0] },
+);
+
+sub _attribute($) { $int_attrs{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
+
 #-----------------
 =section MF::FLOAT, floating-point numbers
 Floating point numbers.  Only a limited set of floating point syntaxes is permitted, see
@@ -408,7 +431,9 @@ package
 use base 'Math::Formula::Type';
 use POSIX  qw/floor/;
 
-sub _pattern { '[0-9]+ (?: \.[0-9]+ (?: e [+-][0-9]+ )? | e [+-][0-9]+ )' }
+sub _pattern  { '[0-9]+ (?: \.[0-9]+ (?: e [+-][0-9]+ )? | e [+-][0-9]+ )' }
+sub _value($) { $_[1] + 0.0 }
+sub _token($) { my $t = sprintf '%g', $_[1]; $t =~ /[e.]/ ?  $t : "$t.0" }
 
 sub cast($)
 {	my ($self, $to) = @_;
@@ -446,8 +471,10 @@ sub infix($$$)
 	$self->SUPER::infix(@_);
 }
 
-sub _value($) { $_[1] + 0.0 }
-sub _token($) { my $t = sprintf '%g', $_[1]; $t =~ /[e.]/ ?  $t : "$t.0" }
+# I really do not want a math library in here!  Use formulas with CODE expr
+# my %float_attrs;
+#sub _attribute($) { $float_attrs{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
+
 
 #-----------------
 =section MF::DATETIME, refers to a moment of time
@@ -483,6 +510,18 @@ within the specified date range (from 00:00:00 in the morning upto 23:59:61 at n
   2023-02-21T11:28:34 + P2Y3DT2H -> DATETIME  2025-02-24T13:28:34
   2023-02-21T11:28:34 - P2Y3DT2H -> DATETIME  2021-02-18T09:28:34
   2023-02-21T11:28:34 - 2021-02-18T09:28:34 -> DURATION P2Y3DT2H
+
+Attributes: (the date and time attributes combined)
+
+  date = 2006-11-21T12:23:34.56+0110
+  dt.year    -> INTEGER 2006
+  dt.month   -> INTEGER 11
+  dt.day     -> INTEGER 21
+  dt.hour    -> INTEGER 12
+  dt.minute  -> INTEGER 23
+  dt.second  -> INTEGER 34
+  dt.fracsec -> FLOAT   34.56
+  dt.tz      -> STRING  +0110
 =cut
 
 package
@@ -490,6 +529,24 @@ package
 
 use base 'Math::Formula::Type';
 use DateTime ();
+
+sub _token($) { $_[1]->datetime . ($_[1]->time_zone->name =~ s/UTC$/+0000/r) }
+
+sub _value($)
+{	my ($self, $token) = @_;
+	$token =~ m/^
+		([12][0-9]{3}) \- (0[1-9]|1[012]) \- (0[1-9]|[12][0-9]|3[01]) T
+		([01][0-9]|2[0-3]) \: ([0-5][0-9]) \: ([0-5][0-9]|6[01]) (?:(\.[0-9]+))?
+		([+-] [0-9]{4})?
+	$ /x or return;
+
+	my $tz_offset = $8 // '+0000';  # careful with named matches :-(
+	my @args = ( year => $1, month => $2, day => $3, hour => $4, minute => $5, second => $6,
+		nanosecond => ($7 // 0) * 1_000_000_000 );
+	my $tz = DateTime::TimeZone::OffsetOnly->new(offset => $tz_offset);
+
+	DateTime->new(@args, time_zone => $tz);
+}
 
 sub cast($)
 {	my ($self, $to) = @_;
@@ -532,22 +589,11 @@ sub infix($$$@)
 	$self->SUPER::infix(@_);
 }
 
-sub _token($) { $_[1]->datetime . ($_[1]->time_zone->name =~ s/UTC$/+0000/r) }
-
-sub _value($)
-{	my ($self, $token) = @_;
-	$token =~ m/^
-		([12][0-9]{3}) \- (0[1-9]|1[012]) \- (0[1-9]|[12][0-9]|3[01]) T
-		([01][0-9]|2[0-3]) \: ([0-5][0-9]) \: ([0-5][0-9]|6[01]) (?:\.([0-9]+))?
-		([+-] [0-9]{4})?
-	$ /x or return;
-
-	my $tz_offset = $8 // '+0000';  # careful with named matches :-(
-	my @args = ( year => $1, month => $2, day => $3, hour => $4, minute => $5, second => $6,
-		nanosecond => ($7 // 0) * 1_000_000_000 );
-	my $tz = DateTime::TimeZone::OffsetOnly->new(offset => $tz_offset);
-
-	DateTime->new(@args, time_zone => $tz);
+my %dt_attrs; # none yet
+sub _attribute($)
+{	   $dt_attrs{$_[1]}
+	|| $MF::DATE::date_attrs{$_[1]} || $MF::TIME::time_attrs{$_[1]}
+	|| $_[0]->SUPER::_attribute($_[1]);
 }
 
 #-----------------
@@ -578,7 +624,15 @@ in the same timezone, this will return false.
   2023-02-22 < 1966-04-05          -> BOOLEAN  false
   2023-02-22 <=> 1966-04-05        -> INTEGER 1      # -1, 0 1
 
-  4 + 2000-10-20         -> INTEGER 1974  # parser accident repaired
+  4 + 2000-10-20 -> INTEGER 1974  # parser accident repaired
+
+Attributes:
+
+  date = 2006-11-21+0700
+  date.year      -> INTEGER 2006
+  date.month     -> INTEGER 11
+  date.day       -> INTEGER 21
+  date.tz        -> STRING  "+0700"
 =cut
 
 package
@@ -592,6 +646,22 @@ use DateTime::TimeZone  ();
 use DateTime::TimeZone::OffsetOnly ();
 
 sub _pattern { '[12][0-9]{3} \- (?: 0[1-9] | 1[012] ) \- (?: 0[1-9]|[12][0-9]|3[01])' }
+
+sub _token($) { $_[1]->ymd . ($_[1]->time_zone->name =~ s/UTC$/+0000/r) }
+
+sub _value($)
+{	my ($self, $token) = @_;
+	$token =~ m/^
+		([12][0-9]{3}) \- (0[1-9]|1[012]) \- (0[1-9]|[12][0-9]|3[01])
+		([+-] [0-9]{4})?
+	$ /x or return;
+
+	my $tz_offset = $4 // '+0000';  # careful with named matches :-(
+	my @args = ( year => $1, month => $2, day => $3);
+	my $tz = DateTime::TimeZone::OffsetOnly->new(offset => $tz_offset);
+
+	DateTime->new(@args, time_zone => $tz);
+}
 
 sub cast($)
 {   my ($self, $to) = @_;
@@ -663,21 +733,13 @@ sub infix($$@)
 	$self->SUPER::infix(@_);
 }
 
-sub _token($) { $_[1]->ymd . ($_[1]->time_zone->name =~ s/UTC$/+0000/r) }
-
-sub _value($)
-{	my ($self, $token) = @_;
-	$token =~ m/^
-		([12][0-9]{3}) \- (0[1-9]|1[012]) \- (0[1-9]|[12][0-9]|3[01])
-		([+-] [0-9]{4})?
-	$ /x or return;
-
-	my $tz_offset = $4 // '+0000';  # careful with named matches :-(
-	my @args = ( year => $1, month => $2, day => $3);
-	my $tz = DateTime::TimeZone::OffsetOnly->new(offset => $tz_offset);
-
-	DateTime->new(@args, time_zone => $tz);
-}
+our %date_attrs = (
+   year     => sub { MF::INTEGER->new(undef, $_[0]->value->year)  },
+   month    => sub { MF::INTEGER->new(undef, $_[0]->value->month) },
+   day      => sub { MF::INTEGER->new(undef, $_[0]->value->day) },
+   tz       => sub { MF::STRING ->new(undef, $_[0]->value->time_zone->name) },
+);
+sub _attribute($) { $date_attrs{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
 
 #-----------------
 =section MF::TIME, a moment during any day
@@ -699,8 +761,18 @@ Time supports numeric comparison, which respects the timezone.
   12:00:34 - PT15M -> TIME 11:45:34   # round-up coworkers
   23:40:00 + PT7H  -> TIME 06:40:00   # early rise
 
-  18:00:00+0200 == 17:00:00+0100 -> BOOLEAN
+  18:00:00+0200 ==  17:00:00+0100 -> BOOLEAN
   18:00:00+0200 <=> 17:00:00+0100 -> INTEGER
+
+Attributes:
+
+  time = 12:23:34.56+0110
+  time.hour        -> INTEGER 12
+  time.minute      -> INTEGER 23
+  time.second      -> INTEGER 34
+  time.fracsec     -> FLOAT   34.56
+  time.tz          -> STRING  +0110
+
 =cut
 
 package
@@ -731,7 +803,7 @@ sub _value($)
 	DateTime->new(@args, time_zone => $tz);
 }
 
-my %attributes = (
+our %time_attrs = (
    hour     => sub { MF::INTEGER->new(undef, $_[0]->value->hour)  },
    minute   => sub { MF::INTEGER->new(undef, $_[0]->value->minute) },
    second   => sub { MF::INTEGER->new(undef, $_[0]->value->second) },
@@ -739,7 +811,7 @@ my %attributes = (
    tz       => sub { MF::STRING ->new(undef, $_[0]->value->time_zone->name) },
 );
 
-sub _attribute($) { $attributes{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
+sub _attribute($) { $time_attrs{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
 
 sub infix($$@)
 {	my $self = shift;
@@ -798,6 +870,23 @@ package
 use base 'Math::Formula::Type';
 use DateTime::Duration ();
 
+sub _pattern { '[+-]? P (?:[0-9]+Y)? (?:[0-9]+M)? (?:[0-9]+D)? '
+   . ' (?:T (?:[0-9]+H)? (?:[0-9]+M)? (?:[0-9]+(?:\.[0-9]+)?S)? )? \b';
+}
+
+use DateTime::Format::Duration::ISO8601 ();
+my $dur_format = DateTime::Format::Duration::ISO8601->new;
+# Implementation dus not like negatives, but DateTime::Duration does.
+
+sub _token($) { ($_[1]->is_negative ? '-' : '') . $dur_format->format_duration($_[1]) }
+
+sub _value($)
+{	my $value    = $_[1];
+	my $negative = $value =~ s/^-//;
+	my $duration = $dur_format->parse_duration($value);
+	$negative ? $duration->multiply(-1) : $duration;
+}
+
 sub prefix($)
 {   my ($self, $op, $right) = @_;
       $op eq '+' ? $self
@@ -827,22 +916,8 @@ sub infix($$@)
 	$self->SUPER::infix(@_);
 }
 
-sub _pattern { '[+-]? P (?:[0-9]+Y)? (?:[0-9]+M)? (?:[0-9]+D)? '
-               . ' (?:T (?:[0-9]+H)? (?:[0-9]+M)? (?:[0-9]+(?:\.[0-9]+)?S)? )? \b';
-}
-
-use DateTime::Format::Duration::ISO8601 ();
-my $dur_format = DateTime::Format::Duration::ISO8601->new;
-# Implementation dus not like negatives, but DateTime::Duration does.
-
-sub _token($) { ($_[1]->is_negative ? '-' : '') . $dur_format->format_duration($_[1]) }
-
-sub _value($)
-{	my $value    = $_[1];
-	my $negative = $value =~ s/^-//;
-	my $duration = $dur_format->parse_duration($value);
-	$negative ? $duration->multiply(-1) : $duration;
-}
+my %dur_attrs;   # Sorry, the attributes of DateTime::Duration make no sense
+sub _attribute($) { $dur_attrs{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
 
 #-----------------
 =section MF::NAME, refers to something in the context
