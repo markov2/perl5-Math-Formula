@@ -27,7 +27,13 @@ is known beforehand.
 
 =section Constructors
 
+=c_method new $token|undef, [$value]
+The object is a blessed ARRAY.  On the first spot is the $token.  On the
+second spot might be the decoded value of the token, in internal Perl
+representation.  When no $token is passed (value C<undef> is explicit), then
+you MUST provide a $value.  The token will be generated on request.
 =cut
+# new() is implemented in the base-class, but documented here
 
 #-----------------
 =section MF::Formula::Type
@@ -48,6 +54,12 @@ sub cast($)
 
 	undef;
 }
+
+=method token
+Returns the token in string form.  This may be a piece of text as parsed
+from the expression string, or generated when the token is computed.
+=cut
+# token() is implemented in de base-class ::Token, but documented here
 
 
 # Returns a value as result of a calculation.
