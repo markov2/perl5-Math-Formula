@@ -150,6 +150,11 @@ of a pattern match operator ('C<like>' and 'C<unlike>').
 
 Besides the four match operators, strings can be concatenated using 'C<~>'.
 
+Strings also implement textual comparison operators C<lt>, C<le>, C<eq>,
+C<ne>, C<ge>, C<gt>, and C<cmp>.  Read its section in M<Math::Formula>.
+These comparisons use L<Unicode::Collate> in an attempt to get correct
+utf8 sorting.
+
 =examples of strings
 
   "double quoted string"
@@ -159,12 +164,17 @@ Besides the four match operators, strings can be concatenated using 'C<~>'.
   "a" =~ "regexp"     -> BOOLEAN, see MF::REGEXP
   "a" like "pattern"  -> BOOLEAN, see MF::PATTERN
 
+  "a" gt "b"          -> BOOLEAN
+  "a" cmp "b"         -> INTEGER -1, 0, 1
 =cut
 
 package
 	MF::STRING;
 
 use base 'Math::Formula::Type';
+
+use Unicode::Collate ();
+my $collate = Unicode::Collate->new;  #XXX which options do we need?
 
 sub cast($)
 {	my ($self, $to) = @_;
@@ -193,6 +203,10 @@ sub infix($$$)
 		my $v = ! $r ? undef
 			  : $op eq 'like' ? $self->value =~ $r->regexp : $self->value !~ $r->regexp;
 		return MF::BOOLEAN->new(undef, $v // 0) if $r;
+	}
+	elsif($op eq 'cmp')
+	{	my $r = $right->isa('MF::STRING') ? $right : $right->cast('MF::STRING');
+		return MF::INTEGER->new(undef, $collate->cmp($self->value, $right->value));
 	}
 
 	$self->SUPER::infix(@_);
@@ -232,6 +246,9 @@ Integers support infix operators C<+>, C<->, C<*>, C<%> (modulo) which result
 in integers.  Infix operator C</> returns a float.  All numeric comparison operators
 return a boolean.
 
+Integers implement the numeric sort operator C<< <=> >>, which may be mixed
+with floats.
+
 =examples of integers
 
   42        # the answer to everything
@@ -250,6 +267,9 @@ return a boolean.
   3 * 4        -> INTEGER   12
   12 % 5       -> INTEGER   2
   12 / 5       -> FLOAT     2.4
+
+  1 < 2        -> BOOLEAN   true
+  1 <=> 2      -> INTEGER   -1     # -1, 0, 1
 
   not 0        -> BOOLEAN   true
   not 42       -> BOOLEAN   false
@@ -287,9 +307,11 @@ sub infix($$$)
 			  : $op eq '-' ? $self->value - $right->value
 			  : $op eq '*' ? $self->value * $right->value
 			  : $op eq '%' ? $self->value % $right->value
-			  : $op eq '<=>' ? $self->value <=> $right->value
 			  : undef;
 		return ref($right)->new(undef, $v) if defined $v;
+
+		return MF::INTEGER->new(undef, $self->value <=> $right->value)
+			if $op eq '<=>';
 
 		return MF::FLOAT->new(undef, $self->value / $right->value)
 			if $op eq '/';
@@ -328,7 +350,8 @@ must be a digit on both sides.
 Floats support prefix operators C<+> and C<->.
 
 Floats support infix operators C<+>, C<->, C<*>, C<%> (modulo), and C</> which result
-in floats.  All numeric comparison operators return a boolean.
+in floats.  All numeric comparison operators are supported, also in combination with
+integers.
 
 =examples of floats
 
@@ -338,6 +361,10 @@ in floats.  All numeric comparison operators return a boolean.
   3e+10
   -12.345
 
+  3.14 / 4
+  2.7 < π        -> BOOLEAN true
+  2.12 <=> 4.89  -> INTEGER -1    # -1, 0, 1
+  
 =cut
 
 package
@@ -375,9 +402,11 @@ sub infix($$$)
 			  : $op eq '*' ? $self->value * $right->value
 			  : $op eq '%' ? $self->value % $right->value
 			  : $op eq '/' ? $self->value / $right->value
-			  : $op eq '<=>' ? $self->value <=> $right->value
 			  : undef;
 		return MF::FLOAT->new(undef, $v) if defined $v;
+
+		return MF::INTEGER->new(undef, $self->value <=> $right->value)
+			if $op eq '<=>';
 	}
 	$self->SUPER::infix(@_);
 }
@@ -404,6 +433,10 @@ Datetimes can be cast to a time or a date, with loss of information.
 It is possible to add (C<+>) and subtract (C<->) durations from a datetime, which result
 in a new datetime.  When you subtract one datetime from another datetime, the result is
 a duration.
+
+Compare a datetime with an other datetime numerically (implemented as text comparison).
+When the datetime is compared with a date, it is checked whether the point of time is
+within the specified date range (from 00:00:00 in the morning upto 23:59:61 at night).
 
 =examples for datetime
 
@@ -445,6 +478,22 @@ sub infix($$$@)
 			return MF::DURATION->new(undef, $dt->subtract_datetime($right->value));
 		}
 	}
+
+	if($op eq '<=>')
+	{	return MF::INTEGER->new(undef, DateTime->compare($self->value, $right->value))
+			if $right->isa('MF::DATETIME');
+
+		if($right->isa('MF::DATE'))
+		{	# Many timezone problems solved by DateTime
+			my $date  = $right->token;
+			my $begin = $self->_value($date =~ /\+/ ? $date =~ s/\+/T00:00:00+/r : $date.'T00:00:00');
+			return MF::INTEGER->new(undef, -1) if DateTime->compare($begin, $self->value) > 0;
+
+			my $end   = $self->_value($date =~ /\+/ ? $date =~ s/\+/T23:59:59+/r : $date.'T23:59:59');
+			return MF::INTEGER->new(undef, DateTime->compare($self->value, $end) > 0 ? 1 : 0);
+		}
+	}
+
 	$self->SUPER::infix(@_);
 }
 
@@ -480,7 +529,8 @@ a new date.  Those durations cannot contain a time component.
 An subtract (C<->) from a date produces a duration.
 
 You may also add a time to a date, forming a datetime.  Those may be in diffent
-timezones.
+timezones.  You may also numerically compare dates, but only when they are not
+in the same timezone, this will return false.
 
 =examples for date
 
@@ -490,8 +540,10 @@ timezones.
   2023-02-21+0200 - P3D            -> DATE     2023-02-18+0200
   2012-03-08+0100 + 06:07:08+0200  -> DATETIME 2012-03-08T06:07:08+0300
   2023-02-26 - 2023-01-20          -> DURATION P1M6D
+  2023-02-22 < 1966-04-05          -> BOOLEAN  false
+  2023-02-22 <=> 1966-04-05        -> INTEGER 1      # -1, 0 1
 
-  4 + 2000-10-20 -> INTEGER 1974  # parser accident repaired
+  4 + 2000-10-20         -> INTEGER 1974  # parser accident repaired
 =cut
 
 package
@@ -499,7 +551,7 @@ package
 
 use base 'Math::Formula::Type';
 
-use Log::Report 'math-formula', import => [ qw/error __x/ ];
+use Log::Report 'math-formula', import => [ qw/error warning __x/ ];
 
 use DateTime::TimeZone  ();
 use DateTime::TimeZone::OffsetOnly ();
@@ -550,7 +602,7 @@ sub infix($$@)
 	}
 
 	if($op eq '+' || $op eq '-')
-	{	my $r = $right->isa('MF::DURATION') ? $right : $right->case('MF::DURATION');
+	{	my $r = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION');
 		! $r || $r->token !~ m/T.*[1-9]/
 			or error __x"only duration with full days with DATE, found '{value}'",
 				value => $r->token;
@@ -558,6 +610,19 @@ sub infix($$@)
 		my $dt = $self->value->clone;
 		my $v = $op eq '+' ? $dt->add_duration($right->value) : $dt->subtract_duration($right->value);
 		return MF::DATE->new(undef, $v);
+	}
+
+	if($op eq '<=>')
+	{	my $r   = $right->isa('MF::DATE') ? $right : $right->cast('MF::DATE');
+		my ($ld, $ltz) = $self->token =~ m/(.{10})(.*)/;
+		my ($rd, $rtz) =    $r->token =~ m/(.{10})(.*)/;
+
+		# It is probably a configuration issue when you configure this.
+		$ld ne $rd || ($ltz //'') eq ($rtz //'')
+			or warning __x"dates '{first}' and '{second}' do not match on timezone",
+				first => $self->token, second => $r->token;
+
+		return MF::INTEGER->new(undef, $ld cmp $rd);
 	}
 
 	$self->SUPER::infix(@_);
@@ -586,6 +651,8 @@ Usefull to indicate a daily repeating event.  For instance, C<start-backup: 04:0
 You can add a short duration to a time: when you cross a day boundery, it is still only
 interpreted for the time itself.
 
+Time supports numeric comparison, which respects the timezone.
+
 =examples for time
 
   17:00:00+0600 # usually keeping track of time-zone
@@ -595,8 +662,10 @@ interpreted for the time itself.
 
   12:00:34 + PT30M -> TIME 12:30:34   # end of lunch
   12:00:34 - PT15M -> TIME 11:45:34   # round-up coworkers
-
   23:40:00 + PT7H  -> TIME 06:40:00   # early rise
+
+  18:00:00+0200 == 17:00:00+0100 -> BOOLEAN
+  18:00:00+0200 <=> 17:00:00+0100 -> INTEGER
 =cut
 
 package
@@ -621,7 +690,9 @@ sub _value($)
 	$ /x or return;
 
 	my $tz_offset = $5 // '+0000';  # careful with named matches :-(
-	my @args = ( year => 2000, hour => $1, minute => $2, second => $3, nanosecond => ($4 // 0) * 1_000_000_000);
+
+	# DateTime requires a year
+	my @args = (year => 2000, hour => $1, minute => $2, second => $3, nanosecond => ($4 //0) * 1_000_000_000);
 	my $tz = DateTime::TimeZone::OffsetOnly->new(offset => $tz_offset // '+0000');
 
 	DateTime->new(@args, time_zone => $tz);
@@ -655,6 +726,12 @@ A sum of 12 months will lead to 1 year, but 40 days will stay 40 days because th
 day length differs per month.  This will only be resolved when the duration is added
 to an actual datetime.
 
+Two durations can be compared numerically.  However: a bit of care must be taken.
+Sometimes, it is only clear what the ordering is when seend from a certain datetime.
+For instance, which is longer: P1M or P30D?  The current time ("now") is used as
+reference point.  Otherwise, add some other datetime to both durations before
+comparison.
+
 =examples for duration
 
   P1Y2M5D          # duration one year, 2 months, 5 days
@@ -667,6 +744,9 @@ to an actual datetime.
   P1Y2MT3H5M - P3Y8MT5H13M14S -> DURATION -P2Y6MT2H8M14S
   P1DT2H * 4        -> DURATION P4DT8H
   4 * P1DT2H        -> DURATION P4DT8H
+
+  P1Y > P1M         -> BOOLEAN true
+  PT20M <=> PT19M   => INTEGER 1     # -1, 0, 1
 =cut
 
 package
@@ -696,8 +776,10 @@ sub infix($$@)
 	{	my $r  = $right->isa('MF::INTEGER') ? $right : $right->cast('MF::INTEGER');
 		return MF::DURATION->new(undef, $self->value->clone->multiply($r->value)) if $r;
 	}
-	# Comparison <=> of durations depends on moment, because normalization is not possible:
-	# Translate compare($dt, $d1, $d2) into "dt + d1 <=> dt + d2"
+	elsif($op eq '<=>')
+	{	my $r  = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION');
+		return MF::INTEGER->new(undef, DateTime::Duration->compare($self->value, $r->value)) if $r;
+	}
 
 	$self->SUPER::infix(@_);
 }
@@ -732,6 +814,9 @@ operator.
 
 A name which is not right of a C<#> or C<.> can be cast into an object
 from the context.
+
+Names are symbol: are not a value by themselves, so have no values to
+be ordered.
 
 =examples of names
 

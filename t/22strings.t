@@ -50,6 +50,10 @@ my @infix = (
 	[ false => 'MF::BOOLEAN', '"abc"   like "*b"' ],
 	[ false => 'MF::BOOLEAN', '"abc" unlike "*c"' ],
 	[ true  => 'MF::BOOLEAN', '"abc" unlike "*b"' ],
+
+	[ -1    => 'MF::INTEGER', '"a" cmp "b"' ],
+	[  0    => 'MF::INTEGER', '"b" cmp "b"' ],
+	[  1    => 'MF::INTEGER', '"c" cmp "b"' ],
 );
 
 foreach (@infix)

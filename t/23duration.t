@@ -58,6 +58,10 @@ my @infix = (
 	[ '-P2Y6MT2H8M14S', 'MF::DURATION', 'P1Y2MT3H5M - P3Y8MT5H13M14S' ],
 	[ 'P4DT8H', 'MF::DURATION', 'P1DT2H * 4' ],
 	[ 'P4DT8H', 'MF::DURATION', '4 * P1DT2H' ],
+
+	[ -1, 'MF::INTEGER', "P10M <=> P11M" ],
+	[  0, 'MF::INTEGER', "P11M <=> P11M" ],
+	[  1, 'MF::INTEGER', "P12M <=> P11M" ],
 );
 
 foreach (@infix)

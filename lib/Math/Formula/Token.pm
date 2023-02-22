@@ -52,13 +52,15 @@ my %table;
 	# Prefix operators and parenthesis are not needed here
     # Keep in sync with the table in Math::Formula
 	my @order = (
-#		[ LTR, ',' ],   ? :
-		[ LTR, 'or', 'xor' ],
-		[ LTR, 'and' ],
-		[ LTR, '+', '-', '~' ],
-		[ LTR, '*', '/', '%' ],
-		[ LTR, '=~', '!~', 'like', 'unlike' ],
-		[ LTR, '#', '.' ],
+#		[ LTR,     ',' ],   ? :
+		[ LTR,     qw/or xor/ ],
+		[ LTR,     'and' ],
+		[ NOCHAIN, qw/ <=> < <= == != >= > / ],
+		[ NOCHAIN, qw/ cmp lt le eq ne ge gt/ ],
+		[ LTR,     qw/+ - ~/ ],
+		[ LTR,     qw!* / %! ],
+		[ LTR,     qw/=~ !~ like unlike/ ],
+		[ LTR,     '#', '.' ],
 	);
 
 	my $level;
@@ -77,7 +79,7 @@ my %table;
 # LTR (compute left to right), RTL (right to left), or NOCHAIN (non-stackable
 # operator).
 
-sub find($) { @{$table{$_[1]}} }
+sub find($) { @{$table{$_[1]} // die "op $_[1]" } }
 
 #-------------------
 # MF::PREFIX, monadic prefix operator
@@ -117,6 +119,23 @@ sub left()  { $_[0][1] }
 # method right(): Returns the AST right from the infix operator.
 sub right() { $_[0][2] }
 
+my %comparison = (
+	'<'  => [ '<=>', sub { $_[0] <  0 } ],
+	'<=' => [ '<=>', sub { $_[0] <= 0 } ],
+	'==' => [ '<=>', sub { $_[0] == 0 } ],
+	'!=' => [ '<=>', sub { $_[0] != 0 } ],
+	'>=' => [ '<=>', sub { $_[0] >= 0 } ],
+	'>'  => [ '<=>', sub { $_[0] >  0 } ],
+	'lt' => [ 'cmp', sub { $_[0] <  0 } ],
+	'le' => [ 'cmp', sub { $_[0] <= 0 } ],
+	'eq' => [ 'cmp', sub { $_[0] == 0 } ],
+	'ne' => [ 'cmp', sub { $_[0] != 0 } ],
+	'ge' => [ 'cmp', sub { $_[0] >= 0 } ],
+	'gt' => [ 'cmp', sub { $_[0] >  0 } ],
+);
+
+sub _compare_ops { keys %comparison }
+
 sub _compute($$)
 {	my ($self, $context, $expr) = @_;
 
@@ -126,7 +145,18 @@ sub _compute($$)
 	my $right = $self->right->_compute($context, $expr)
 		or return undef;
 
-	$left->infix($self->operator, $right, $context, $expr);
+	# Comparison operators are all implemented via a space-ship, when available.
+	# Otherwise, the usual track is taken.
+
+	my $op = $self->operator;
+	if(my $rewrite = $comparison{$op})
+	{	my ($spaceship, $compare) = @$rewrite;
+		if(my $result = $left->infix($spaceship, $right, $context, $expr))
+		{	return MF::BOOLEAN->new(undef, $compare->($result->value));
+		}
+	}
+
+	$left->infix($op, $right, $context, $expr);
 }
 
 1;

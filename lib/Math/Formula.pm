@@ -140,8 +140,13 @@ my $match_duration = MF::DURATION->_pattern;
 
 my $match_op    = join '|',
 	'[*\/+\-#~.%]',
-	qw/=~ !~ <=> < <= > >= == /,
-	(map "$_\\b", qw/and or not xor like unlike/);
+	qw/=~ !~
+	 <=> <= >= == != < > /,  # order is important
+	( map "$_\\b", qw/
+		and or not xor
+		like unlike
+		cmp lt le eq ne ge gt/
+	);
 
 sub _tokenize($)
 {	my ($self, $s) = @_;
@@ -295,17 +300,38 @@ see M<Math::Formula::Context>.
 The infix operators have the following priorities: (from low to higher,
 each like with equivalent priority)
 
-  LTR   or   xor
-  LTR   and
-  LTR   +    -    ~
-  LTR   *    /    %
-  LTR   =~   !~   like   unlike  # regexps and patterns
-  LTR   #    .                   # fragments and attributes
+  LTR       or   xor
+  LTR       and
+  NOCHAIN	<    >    <=   ==   !=   <=>   # numeric comparison
+  NOCHAIN	lt   gt   le   eq   ne   cmp   # string comparison
+  LTR       +    -    ~
+  LTR       *    /    %
+  LTR       =~   !~   like  unlike         # regexps and patterns
+  LTR       #    .                         # fragments and attributes
 
 The first value is a constant representing associativety.  Either the constant
 LTR (compute left to right), RTL (right to left), or NOCHAIN (non-stackable
 operator).
 
+=section Comparison operators
+
+Some data types support numeric comparison (implement C<< <=> >>, the
+spaceship operator), other support textual comparison (implement C< cmp >),
+where also some types have no intrinsic order.
+
+The C<< <=> >> and C< cmp > return an integer: -1, 0, or 1, representing
+smaller, equal, larger.
+
+  =num  =text
+    <     lt      less than/before
+    <=    le      less-equal
+    ==    eq      equal/the same
+    !-    ne      unequal/different
+    >=    ge      greater-equal
+    >     gt      greater/larger
+
+String comparison uses L<Unicode::Collate>, which might be a bit expensive,
+but at least a better attempt to order utf8 correctly.
 =cut
 
 1;
