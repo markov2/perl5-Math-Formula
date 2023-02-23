@@ -50,7 +50,7 @@ is $f2b->name, 'gosleep';
 is $f2b->expression, '23:30:00';
 
 my $f3 = my $awake =
-	Math::Formula->new(awake => 'goasleep - wakeup', returns => 'MF::DURATION');
+	Math::Formula->new(awake => 'gosleep - wakeup', returns => 'MF::DURATION');
 ok defined $f3, 'pass pre-created formula';
 my $f3b = $context->addFormula($f3);
 ok defined $f3b, '... add does return form';
@@ -99,12 +99,22 @@ ok $c3->formula('awake'  )->name, 'awake';
 ok $c3->formula('renamed')->name, 'awake';
 
 
-### RUN
+### RUN without operators
 
 my $wakeup = $c3->evaluate('wakeup');
 ok defined $wakeup, 'evaluate wakeup';
 isa_ok $wakeup, 'MF::TIME';
 is $wakeup->token, '07:00:00';
+
+use Log::Report mode => "DEBUG";
+### RUN with INFIX operators
+
+my $run2 = $c3->evaluate('awake');
+ok defined $run2, 'run with infix operator';
+isa_ok $run2, 'MF::DURATION';
+is $run2->value, 'P';
+
+### RUN with PREFIX operators
 
 ok 1, 'test context in infix op';
 $c3->add(asleep => 'PT24H + -awake');

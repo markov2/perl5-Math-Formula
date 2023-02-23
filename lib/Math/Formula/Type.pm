@@ -309,7 +309,7 @@ with floats.
   + 2          -> INTEGER   2      # prefix op
   - 2          -> INTEGER   -2     # prefix op
   - -2         -> INTEGER   2      # prefix op, negative int
-    
+  
   1 + 2        -> INTEGER   3      # infix op
   5 - 9        -> INTEGER   -4     # infix op
   3 * 4        -> INTEGER   12
@@ -746,6 +746,17 @@ interpreted for the time itself.
 
 Time supports numeric comparison, which respects the timezone.
 
+When you add (C<+>) a duration to a time, it will result in a new time module 24 hours.
+
+When you subtract (C<->) one time from another, you will get a duration modulo 24 hours.  This
+does not take possible jumps to and from Daylight Savingstime into account.  When you
+care about that, than create a formular involving the actual date:
+
+  bedtime = 23:00:00
+  wakeup  = 06:30:00
+  now     = #system.now
+  sleep   = ((now+P1D).date + wakeup) - (now.date + bedtime)  #DURATION
+
 =examples for time
 
   17:00:00+0600 # usually keeping track of time-zone
@@ -756,6 +767,7 @@ Time supports numeric comparison, which respects the timezone.
   12:00:34 + PT30M -> TIME 12:30:34   # end of lunch
   12:00:34 - PT15M -> TIME 11:45:34   # round-up coworkers
   23:40:00 + PT7H  -> TIME 06:40:00   # early rise
+  07:00:00 - 23
 
   18:00:00+0200 ==  17:00:00+0100 -> BOOLEAN
   18:00:00+0200 <=> 17:00:00+0100 -> INTEGER
@@ -798,11 +810,11 @@ sub _value($)
 }
 
 our %time_attrs = (
-   hour     => sub { MF::INTEGER->new(undef, $_[0]->value->hour)  },
-   minute   => sub { MF::INTEGER->new(undef, $_[0]->value->minute) },
-   second   => sub { MF::INTEGER->new(undef, $_[0]->value->second) },
-   fracsec  => sub { MF::FLOAT  ->new(undef, $_[0]->value->fractional_second) },
-   tz       => sub { MF::STRING ->new(undef, $_[0]->value->time_zone->name) },
+	hour     => sub { MF::INTEGER->new(undef, $_[0]->value->hour)  },
+	minute   => sub { MF::INTEGER->new(undef, $_[0]->value->minute) },
+	second   => sub { MF::INTEGER->new(undef, $_[0]->value->second) },
+	fracsec  => sub { MF::FLOAT  ->new(undef, $_[0]->value->fractional_second) },
+	tz       => sub { MF::STRING ->new(undef, $_[0]->value->time_zone->name) },
 );
 
 sub attribute($) { $time_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]) }
@@ -812,7 +824,11 @@ sub infix($$@)
 	my ($op, $right) = @_;
 
 	if($op eq '+' || $op eq '-')
-	{	if(my $r = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION'))
+	{	if($r->isa('MF::TIME')
+		{	
+		}
+
+		if(my $r = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION'))
 	 	{	my $dt = $self->value->clone;
 			my $v  = $op eq '+' ? $dt->add_duration($right->value) : $dt->subtract_duration($right->value);
 			return MF::TIME->new(undef, $v);
@@ -864,7 +880,7 @@ use base 'Math::Formula::Type';
 use DateTime::Duration ();
 
 sub _pattern { '[+-]? P (?:[0-9]+Y)? (?:[0-9]+M)? (?:[0-9]+D)? '
-   . ' (?:T (?:[0-9]+H)? (?:[0-9]+M)? (?:[0-9]+(?:\.[0-9]+)?S)? )? \b';
+	. ' (?:T (?:[0-9]+H)? (?:[0-9]+M)? (?:[0-9]+(?:\.[0-9]+)?S)? )? \b';
 }
 
 use DateTime::Format::Duration::ISO8601 ();
@@ -882,9 +898,9 @@ sub _value($)
 
 sub prefix($)
 {   my ($self, $op, $right) = @_;
-      $op eq '+' ? $self
-    : $op eq '-' ? MF::DURATION->new('-' . $self->token)
-    : $self->SUPER::prefix($op)
+		$op eq '+' ? $self
+	  : $op eq '-' ? MF::DURATION->new('-' . $self->token)
+	  : $self->SUPER::prefix($op)
 }
 
 sub infix($$@)
@@ -967,6 +983,11 @@ sub validated($$)
 			name => $name =~ s/[^_\p{AlNum}]/ϴ/gr, where => $where;
 
 	$class->new($name);
+}
+
+sub _compute($$)
+{	my ($self, $context, $expr) = @_;
+ 	$context->evaluate($self->token);
 }
 
 #-----------------

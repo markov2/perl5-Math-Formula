@@ -141,9 +141,6 @@ sub _compute($$)
     my $left  = $self->left->_compute($context, $expr)
 		or return undef;
 
-	$left = $context->evaluate($left->token) or return
-		if $left->isa('MF::NAME');
-
 	my $right = $self->right->_compute($context, $expr)
 		or return undef;
 
