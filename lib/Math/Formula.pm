@@ -9,7 +9,7 @@ use warnings;
 use strict;
 use utf8;
 
-use Log::Report;
+use Log::Report 'math-formula';
 
 use Math::Formula::Token;
 use Math::Formula::Type;
@@ -33,6 +33,10 @@ Or better
 
 =chapter DESCRIPTION
 
+B<WARNING:> This is not a programming language: it lacks control structures
+like loops and blocks.  This can be used to get (very) flexible configuration
+files for your program.
+
 B<What makes Math::Formula special?> Zillions of expression evaluators
 have been written in the past.  The application where this module was
 written for has special needs.  Thereefore, this expression evaluator can
@@ -50,14 +54,14 @@ For instance, where are many types which you can use to calculate directly
   2023-02-18                   # dates
   01:18:12                     # times
   P2Y3DT2H                     # duration
-  system                       # external objects
-  unit#owner                   # fragments (object lookups)
+  name                         # outcome of other expressions
+  #unit.owner                  # fragments (namespaces)
   file.size                    # attributes
   (1 + 2) * 3                  # parenthesis
 
 With this, your expressions can look like this:
 
-  my_age   = (system.now.date - 1966-05-04).years
+  my_age   = (#system.now.date - 1966-05-04).years
   is_adult = my_age >= 18
 
 Expressions can refer to values computed by other expressions.  The results are
@@ -97,14 +101,15 @@ The expression MUST return any M<Math::Formula::Type> object.
 
 sub new(%)
 {	my ($class, $name, $expr, %self) = @_;
-	$self{name} = $name;
-	$self{expr} = $expr;
+	$self{_name} = $name;
+	$self{_expr} = $expr;
 	(bless {}, $class)->init(\%self) }
 
 sub init($)
 {	my ($self, $args) = @_;
-	$self->{MSBE_name} = $args->{name};
-	$self->{MSBE_expr} = $args->{expr};
+	$self->{MSBE_name}    = $args->{_name} or panic "every formular requires a name";
+	$self->{MSBE_expr}    = $args->{_expr} or panic "every formular requires an expression";
+	$self->{MSBE_returns} = $args->{returns};
 	$self;
 }
 
@@ -113,15 +118,17 @@ sub init($)
 
 =method name
 Returns the name of this expression.
-=cut
-
-sub name()       { $_[0]->{MSBE_name} }
 
 =method expression
 Returns the expression string, which was used at creation.
+
+=method returns
+Set when the expression promisses to produce a certain type.
 =cut
 
+sub name()       { $_[0]->{MSBE_name} }
 sub expression() { $_[0]->{MSBE_expr} }
+sub returns()    { $_[0]->{MSBE_returns} }
 
 =method tree $expression
 Returns the Abstract Syntax Tree of the $expression. Some of the types
@@ -234,7 +241,7 @@ sub _build_ast($$)
 			{	# Fragments and Methods are always infix, but their left-side arg
 				# can be left-out.  As PREFIX, they would be RTL but we need LTR
 				unshift @$t, $first;
-				$first = MF::NAME->new('context');
+				$first = MF::NAME->new('');
 				redo PROGRESS;
 			}
 
@@ -279,20 +286,22 @@ Calculate the value for this expression given the $context.
 
 =option  expect %type
 =default expect <any ::Type>
-When the expected $type is given, the result will be guaranteed of the
-correct type or C<undef>.
+When specified, the result will be of the expected $type or C<undef>.  This overrules
+M<new(returns)>.  Without either, the result type depends on the evaluation of the
+expression.
 =cut
 
 sub evaluate($)
 {	my ($self, $context, %args) = @_;
 	my $expr   = $self->expression;
+
 	my $result = ref $expr eq 'CODE'
 	  ? $expr->($context, $self, %args)
 	  : $self->tree($expr)->_compute($context, $self);
 
 	# For external evaluation calls, we must follow the request
-	my $expect = $args{expect};
-	$expect && ! $result->isa($expect) ? $result->cast($expect) : $result;
+	my $expect = $args{expect} || $self->returns;
+	$result && $expect && ! $result->isa($expect) ? $result->cast($expect) : $result;
 }
 
 #--------------------------

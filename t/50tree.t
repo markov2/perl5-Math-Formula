@@ -46,7 +46,7 @@ is_deeply tree_for('.func1#frag.func2'),
 	MF::INFIX->new('.',
 		MF::INFIX->new('#',
 			MF::INFIX->new('.',
-				MF::NAME->new('context'), MF::NAME->new('func1')
+				MF::NAME->new(''), MF::NAME->new('func1')
 			),
 			MF::NAME->new('frag')
 		),

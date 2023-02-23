@@ -31,7 +31,7 @@ my $expr = Math::Formula->new(test => \&own_code);
 ok defined $expr, 'created expression with code';
 isa_ok $expr->expression, 'CODE';
 
-my $context = Math::Formula::Context->new;
+my $context = Math::Formula::Context->new(name => 'test');
 my $result1 = $expr->evaluate($context, expect => 'MF::INTEGER', flag => 4 );
 isa_ok $result1, 'MF::INTEGER';
 is $result1->value, '4';

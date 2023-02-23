@@ -5,6 +5,9 @@ use v5.16;  # fc
 package Math::Formula::Type;
 use base 'Math::Formula::Token';
 
+#!!! The declarations of all other packages in this file are indented to avoid
+#!!! indexing by CPAN.
+
 use Log::Report 'math-formula', import => [ qw/error __x/ ];
 
 # Object is an ARRAY. The first element is the token, as read from the formula
@@ -101,14 +104,14 @@ sub prefix
 		op => $op, child => $child;
 }
 
-sub _attribute { warn "Cannot find attribute $_[1] for ".(ref $_[0]) }
+sub attribute { warn "Cannot find attribute $_[1] for ".(ref $_[0]) }
 
 sub infix($@)
 {   my $self = shift;
 	my ($op, $right) = @_;
 
 	if($op eq '.' && $right->isa('MF::NAME'))
-	{	if(my $attr = $self->_attribute($right->token))
+	{	if(my $attr = $self->attribute($right->token))
 		{	return $attr->($self, @_);
 		}
 	}
@@ -141,8 +144,7 @@ Booleans implement the prefix operator "C<+>", and infix operators 'C<and>',
 
 =cut
 
-package
-	MF::BOOLEAN;          # no a new line, so not in CPAN index
+	package MF::BOOLEAN;
 
 use base 'Math::Formula::Type';
 
@@ -209,8 +211,7 @@ Attributes:
    "ABC".lower        -> STRING "abc", lower-case using utf8 folding
 =cut
 
-package
-	MF::STRING;
+	package MF::STRING;
 
 use base 'Math::Formula::Type';
 
@@ -268,7 +269,7 @@ my %string_attrs = (
    lower    => sub { MF::STRING->new(undef, fc($_[0]->value)) },
 );
 
-sub _attribute($) { $string_attrs{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
+sub attribute($) { $string_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]) }
 
 #-----------------
 =section MF::INTEGER, a long whole number
@@ -327,8 +328,7 @@ Attributes
 
 =cut
 
-package
-	MF::INTEGER;
+	package MF::INTEGER;
 
 use base 'Math::Formula::Type';
 use Log::Report 'math-formula', import => [ qw/error __x/ ];
@@ -396,7 +396,7 @@ sub _value($)
 my %int_attrs = (
    abs => sub { $_[0]->value < 0 ? MF::INTEGER->new(undef, - $_[0]->value) : $_[0] },
 );
-sub _attribute($) { $int_attrs{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
+sub attribute($) { $int_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]) }
 
 #-----------------
 =section MF::FLOAT, floating-point numbers
@@ -424,8 +424,7 @@ integers.
   
 =cut
 
-package
-	MF::FLOAT;
+	package MF::FLOAT;
 
 use base 'Math::Formula::Type';
 use POSIX  qw/floor/;
@@ -472,7 +471,7 @@ sub infix($$$)
 
 # I really do not want a math library in here!  Use formulas with CODE expr
 # my %float_attrs;
-#sub _attribute($) { $float_attrs{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
+#sub attribute($) { $float_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]) }
 
 
 #-----------------
@@ -523,8 +522,7 @@ Attributes: (the date and time attributes combined)
   dt.tz      -> STRING  +0110
 =cut
 
-package
-	MF::DATETIME;
+	package MF::DATETIME;
 
 use base 'Math::Formula::Type';
 use DateTime ();
@@ -589,10 +587,10 @@ sub infix($$$@)
 }
 
 my %dt_attrs; # none yet
-sub _attribute($)
+sub attribute($)
 {	   $dt_attrs{$_[1]}
 	|| $MF::DATE::date_attrs{$_[1]} || $MF::TIME::time_attrs{$_[1]}
-	|| $_[0]->SUPER::_attribute($_[1]);
+	|| $_[0]->SUPER::attribute($_[1]);
 }
 
 #-----------------
@@ -634,8 +632,7 @@ Attributes:
   date.tz        -> STRING  "+0700"
 =cut
 
-package
-	MF::DATE;
+	package MF::DATE;
 
 use base 'Math::Formula::Type';
 
@@ -738,7 +735,7 @@ our %date_attrs = (
    day      => sub { MF::INTEGER->new(undef, $_[0]->value->day) },
    tz       => sub { MF::STRING ->new(undef, $_[0]->value->time_zone->name) },
 );
-sub _attribute($) { $date_attrs{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
+sub attribute($) { $date_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]) }
 
 #-----------------
 =section MF::TIME, a moment during any day
@@ -774,9 +771,7 @@ Attributes:
 
 =cut
 
-package
-	MF::TIME;
-
+	package MF::TIME;
 use base 'Math::Formula::Type';
 
 sub _pattern { '(?:[01][0-9]|2[0-3]) \: [0-5][0-9] \: (?:[0-5][0-9]) (?:\.[0-9]+)?' }
@@ -810,7 +805,7 @@ our %time_attrs = (
    tz       => sub { MF::STRING ->new(undef, $_[0]->value->time_zone->name) },
 );
 
-sub _attribute($) { $time_attrs{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
+sub attribute($) { $time_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]) }
 
 sub infix($$@)
 {	my $self = shift;
@@ -863,10 +858,9 @@ comparison.
   PT20M <=> PT19M   => INTEGER 1     # -1, 0, 1
 =cut
 
-package
-	MF::DURATION;
-
+	package MF::DURATION;
 use base 'Math::Formula::Type';
+
 use DateTime::Duration ();
 
 sub _pattern { '[+-]? P (?:[0-9]+Y)? (?:[0-9]+M)? (?:[0-9]+D)? '
@@ -916,7 +910,7 @@ sub infix($$@)
 }
 
 my %dur_attrs;   # Sorry, the attributes of DateTime::Duration make no sense
-sub _attribute($) { $dur_attrs{$_[1]} || $_[0]->SUPER::_attribute($_[1]) }
+sub attribute($) { $dur_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]) }
 
 #-----------------
 =section MF::NAME, refers to something in the context
@@ -952,28 +946,13 @@ be ordered.
   file.size # method 'size' on object 'file'
 =cut
 
-package
-	MF::NAME;
-
+	package MF::NAME;
 use base 'Math::Formula::Type';
+
 use Log::Report 'math-formula', import => [ qw/error __x/ ];
 
 my $pattern = '[_\p{Alpha}][_\p{AlNum}]*';
 sub _pattern() { $pattern }
-
-sub cast($)
-{	my ($self, $to, $expr, $context) = @_;
-
-	if($to eq 'MF::OBJECT')
-	{	my $object = $context->object($self->token)
-			or error __x"expression '{expr}', cannot find object '{name}' in context",
-				expr => $expr->name, name => $self->token;
-
-		return $object;
-	}
-
-	$self->SUPER::cast($to);
-}
 
 =c_method validated $string, $where
 Create a MF::NAME from a $string which needs to be validated for being a valid
@@ -983,36 +962,12 @@ name.  The $where will be used in error messages when the $string is invalid.
 sub validated($$)
 {	my ($class, $name, $where) = @_;
 
-    $name =~ qr/^$pattern$/o
+	$name =~ qr/^$pattern$/o
 		or error __x"Illegal name '{name}' in '{where}'",
 			name => $name =~ s/[^_\p{AlNum}]/ϴ/gr, where => $where;
 
 	$class->new($name);
 }
-
-#-----------------
-=section MF::OBJECT, access to externally provided data
-=cut
-
-package
-	MF::OBJECT;
-
-use base 'Math::Formula::Type';
-use Log::Report 'math-formula', import => [ qw/error __x/ ];
-
-sub _fragment()
-{	my ($self, $fragment, $expr, $context) = @_;
-	...
-}
-
-sub _method()
-{	my ($self, $method, $expr) = @_;
-	...
-}
-
-#	[ '#',   'MF::NAME' => undef, \&_fragment ],
-#	[ '.',   'MF::NAME' => undef, \&_method   ],
-
 
 #-----------------
 =section MF::PATTERN, pattern matching
@@ -1036,9 +991,7 @@ Besides, it supports curly alternatives like C<*.{jpg,gif,png}>.
 
 =cut
 
-package
-    MF::PATTERN;
-
+	package MF::PATTERN; 
 use base 'MF::STRING';
 
 sub _from_string($)
@@ -1088,9 +1041,7 @@ operators are detected, those will automatically be cast into a regexp.
   "abc" !~ "c$"      -> BOOLEAN false
 =cut
 
-package
-    MF::REGEXP;
-
+	package MF::REGEXP;
 use base 'MF::STRING';
 
 sub _from_string($)
@@ -1107,6 +1058,73 @@ sub regexp
 	return $self->[2] if defined $self->[2];
 	my $value = $self->value =~ s!/!\\/!gr;
 	$self->[2] = qr/$value/xu;
+}
+
+#-----------------
+=section MF::FRAGMENT, access to externally provided data
+
+The used of this type is explained in M<Math::Formula::Context>.
+
+=cut
+
+	package MF::FRAGMENT;
+use base 'Math::Formula::Type';
+
+use Log::Report 'math-formula', import => [ qw/panic error __x/ ];
+
+=c_method new $name, $context, %options
+
+=option  attributes HASH
+=default attributes {}
+Initial attributes, addressed with infix operator C<.> (dot).
+
+=option  fragments HASH
+=default fragments {}
+Initial fragments, addressed with infix operator C<#> (sharp).
+
+=cut
+
+sub new(@)
+{	my ($class, $name, $context, %args) = @_;
+
+	my $self = $class->SUPER::new($name, $context,
+		$args{attributes} || {},
+		$args{fragments}  || {},
+	);
+
+	$self;
+}
+
+sub name    { $_[0]->token }
+sub context { $_[0]->value }
+
+sub infix($$@)
+{	my $self = shift;
+	my ($op, $right) = @_;
+
+	if($op eq '#' && $right->isa('MF::NAME'))
+	{	...
+	}
+
+	$self->SUPER::infix(@_);
+}
+
+=method addAttribute $name, $code
+=cut
+
+sub addAttribute($$)
+{	my ($self, $name, $code) = @_;
+	$self->[2]{$name} = $code;
+}
+
+sub attribute($)
+{	my ($self, $name) = @_;
+	$self->[2]{$name} || $self->SUPER::attribute($name);
+}
+
+sub _fragment($)
+{	my ($self, $name) = @_;
+	$self->[3]{$name};
 }
 
 1;

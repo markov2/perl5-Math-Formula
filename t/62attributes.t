@@ -11,7 +11,7 @@ my $node1 = MF::TIME->new('02:03:04');
 isa_ok $node1, 'MF::TIME', 'parse token';
 is $node1->token, '02:03:04';
 
-my $attr1 =  $node1->_attribute('hour');
+my $attr1 =  $node1->attribute('hour');
 ok defined $attr1, 'attribute exists';
 isa_ok $attr1, 'CODE';
 

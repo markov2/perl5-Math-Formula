@@ -3,6 +3,9 @@ use strict;
 
 package Math::Formula::Token;
 
+#!!! The declarations of all other packages in this file are indented to avoid
+#!!! indexing by CPAN.
+
 #!!! Classes and methods which are of interest of normal users are documented
 #!!! in ::Types, because the package set-up caused too many issues with OODoc.
 
@@ -20,8 +23,7 @@ sub _token { $_[1] }
 # MF::PARENS, parenthesis tokens
 # Parser object to administer parenthesis, but disappears in the AST.
 
-package
-	MF::PARENS;
+	package MF::PARENS;
 
 use base 'Math::Formula::Token';
 
@@ -31,8 +33,7 @@ sub level { $_[0][1] }
 # MF::OPERATOR, operator of yet unknown type.
 # In the AST upgraded to either MF::PREFIX or MF::INFIX.
 
-package
-	MF::OPERATOR;
+	package MF::OPERATOR;
 
 use base 'Math::Formula::Token';
 
@@ -86,8 +87,7 @@ sub find($) { @{$table{$_[1]} // die "op $_[1]" } }
 # Prefix operators process the result of the expression which follows it.
 # This is a specialization from the MF::OPERATOR type, hence shares its methods.
 
-package
-	MF::PREFIX;
+	package MF::PREFIX;
 
 use base 'MF::OPERATOR';
 
@@ -108,8 +108,7 @@ sub _compute($$)
 # Infix operators have two arguments.  This is a specialization from the
 # MF::OPERATOR type, hence shares its methods.
 
-package
-	MF::INFIX;
+	package MF::INFIX;
 
 use base 'MF::OPERATOR';
 
@@ -142,6 +141,9 @@ sub _compute($$)
     my $left  = $self->left->_compute($context, $expr)
 		or return undef;
 
+	$left = $context->evaluate($left->token) or return
+		if $left->isa('MF::NAME');
+
 	my $right = $self->right->_compute($context, $expr)
 		or return undef;
 
@@ -158,5 +160,12 @@ sub _compute($$)
 
 	$left->infix($op, $right, $context, $expr);
 }
+
+#-------------------
+# MF::FORMULAR, temporary wrapper for a formular
+# When a NAME has been looked-up at the left side of an infix operator, or as
+# child of a prefix operator, it will become this.
+
+	package MF::Operator;
 
 1;
