@@ -33,13 +33,17 @@ is known beforehand.
 
 =section Constructors
 
-=c_method new $token|undef, [$value]
+=c_method new $token|undef, [$value], %options
 The object is a blessed ARRAY.  On the first spot is the $token.  On the
 second spot might be the decoded value of the token, in internal Perl
 representation.  When no $token is passed (value C<undef> is explicit), then
 you MUST provide a $value.  The token will be generated on request.
+
+=option  attributes HASH
+=default attributes {}
+(MF::FRAGMENT only) Initial attributes, addressed with infix operator C<.> (dot).
+
 =cut
-# new() is implemented in the base-class, but documented here
 
 #-----------------
 =section MF::Formula::Type
@@ -1162,14 +1166,6 @@ package
 use base 'Math::Formula::Type';
 
 use Log::Report 'math-formula', import => [ qw/panic error __x/ ];
-
-=c_method new $name, $context, %options
-
-=option  attributes HASH
-=default attributes {}
-Initial attributes, addressed with infix operator C<.> (dot).
-
-=cut
 
 sub new(@)
 {	my ($class, $name, $context, %args) = @_;
