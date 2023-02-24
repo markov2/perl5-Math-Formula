@@ -145,7 +145,8 @@ Booleans implement the prefix operator "C<+>", and infix operators 'C<and>',
 
 =cut
 
-	package MF::BOOLEAN;
+package
+	MF::BOOLEAN;
 
 use base 'Math::Formula::Type';
 
@@ -212,7 +213,8 @@ Attributes:
    "ABC".lower        -> STRING "abc", lower-case using utf8 folding
 =cut
 
-	package MF::STRING;
+package
+	MF::STRING;
 
 use base 'Math::Formula::Type';
 
@@ -329,7 +331,8 @@ Attributes
 
 =cut
 
-	package MF::INTEGER;
+package
+	MF::INTEGER;
 
 use base 'Math::Formula::Type';
 use Log::Report 'math-formula', import => [ qw/error __x/ ];
@@ -425,7 +428,8 @@ integers.
   
 =cut
 
-	package MF::FLOAT;
+package
+	MF::FLOAT;
 
 use base 'Math::Formula::Type';
 use POSIX  qw/floor/;
@@ -525,7 +529,8 @@ Attributes: (the date and time attributes combined)
   dt.date    -> DATE    2006-11-21+0110
 =cut
 
-	package MF::DATETIME;
+package
+	MF::DATETIME;
 
 use base 'Math::Formula::Type';
 use DateTime ();
@@ -651,7 +656,8 @@ Attributes:
   date.tz        -> STRING  "+0700"
 =cut
 
-	package MF::DATE;
+package
+	MF::DATE;
 
 use base 'Math::Formula::Type';
 
@@ -792,7 +798,8 @@ Attributes:
 
 =cut
 
-	package MF::TIME;
+package
+	MF::TIME;
 use base 'Math::Formula::Type';
 
 use constant GIGA => 1_000_000_000; 
@@ -902,7 +909,8 @@ comparison.
   PT20M <=> PT19M   => INTEGER 1     # -1, 0, 1
 =cut
 
-	package MF::DURATION;
+package
+	MF::DURATION;
 use base 'Math::Formula::Type';
 
 use DateTime::Duration ();
@@ -990,7 +998,8 @@ be ordered.
   file.size # method 'size' on object 'file'
 =cut
 
-	package MF::NAME;
+package
+	MF::NAME;
 use base 'Math::Formula::Type';
 
 use Log::Report 'math-formula', import => [ qw/error __x/ ];
@@ -1054,7 +1063,8 @@ Besides, it supports curly alternatives like C<*.{jpg,gif,png}>.
 
 =cut
 
-	package MF::PATTERN; 
+package
+	MF::PATTERN; 
 use base 'MF::STRING';
 
 sub _from_string($)
@@ -1104,7 +1114,8 @@ operators are detected, those will automatically be cast into a regexp.
   "abc" !~ "c$"      -> BOOLEAN false
 =cut
 
-	package MF::REGEXP;
+package
+	MF::REGEXP;
 use base 'MF::STRING';
 
 sub _from_string($)
@@ -1130,7 +1141,8 @@ The used of this type is explained in M<Math::Formula::Context>.
 
 =cut
 
-	package MF::FRAGMENT;
+package
+	MF::FRAGMENT;
 use base 'Math::Formula::Type';
 
 use Log::Report 'math-formula', import => [ qw/panic error __x/ ];

@@ -23,7 +23,8 @@ sub _token { $_[1] }
 # MF::PARENS, parenthesis tokens
 # Parser object to administer parenthesis, but disappears in the AST.
 
-	package MF::PARENS;
+package
+	MF::PARENS;
 
 use base 'Math::Formula::Token';
 
@@ -33,7 +34,8 @@ sub level { $_[0][1] }
 # MF::OPERATOR, operator of yet unknown type.
 # In the AST upgraded to either MF::PREFIX or MF::INFIX.
 
-	package MF::OPERATOR;
+package
+	MF::OPERATOR;
 
 use base 'Math::Formula::Token';
 
@@ -87,7 +89,8 @@ sub find($) { @{$table{$_[1]} // die "op $_[1]" } }
 # Prefix operators process the result of the expression which follows it.
 # This is a specialization from the MF::OPERATOR type, hence shares its methods.
 
-	package MF::PREFIX;
+package
+	MF::PREFIX;
 
 use base 'MF::OPERATOR';
 
@@ -108,7 +111,8 @@ sub _compute($$)
 # Infix operators have two arguments.  This is a specialization from the
 # MF::OPERATOR type, hence shares its methods.
 
-	package MF::INFIX;
+package
+	MF::INFIX;
 
 use base 'MF::OPERATOR';
 
@@ -163,6 +167,7 @@ sub _compute($$)
 # When a NAME has been looked-up at the left side of an infix operator, or as
 # child of a prefix operator, it will become this.
 
-	package MF::Operator;
+package
+	MF::Operator;
 
 1;
