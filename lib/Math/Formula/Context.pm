@@ -179,7 +179,8 @@ sub evaluate($$%)
 	# silently ignore missing tags
 	my $form = $self->formula($name);
 	unless($form)
-	{	info __x"no formula '{name}' in {context}", name => $name, context => $self->name;
+	{	warning __x"no formula '{name}' in {context}", name => $name, context => $self->name;
+panic;
 		return undef;
 	}
 

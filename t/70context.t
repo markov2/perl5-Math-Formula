@@ -98,7 +98,6 @@ ok $c3->formula('gosleep')->name, 'gosleep';
 ok $c3->formula('awake'  )->name, 'awake';
 ok $c3->formula('renamed')->name, 'awake';
 
-
 ### RUN without operators
 
 my $wakeup = $c3->evaluate('wakeup');
@@ -106,13 +105,12 @@ ok defined $wakeup, 'evaluate wakeup';
 isa_ok $wakeup, 'MF::TIME';
 is $wakeup->token, '07:00:00';
 
-use Log::Report mode => "DEBUG";
 ### RUN with INFIX operators
 
 my $run2 = $c3->evaluate('awake');
 ok defined $run2, 'run with infix operator';
 isa_ok $run2, 'MF::DURATION';
-is $run2->value, 'P';
+is $run2->token, 'PT16H30M0S';
 
 ### RUN with PREFIX operators
 

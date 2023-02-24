@@ -63,7 +63,8 @@ see what they offer.
 =cut
 
 sub cast($)
-{	my ($self, $to) = @_;
+{	my ($self, $to, $context) = @_;
+
 	return MF::STRING->new(undef, $self->token)
 		if $to eq 'MF::STRING';
 
@@ -108,7 +109,7 @@ sub attribute { warn "Cannot find attribute $_[1] for ".(ref $_[0]) }
 
 sub infix($@)
 {   my $self = shift;
-	my ($op, $right) = @_;
+	my ($op, $right, $context) = @_;
 
 	if($op eq '.' && $right->isa('MF::NAME'))
 	{	if(my $attr = $self->attribute($right->token))
@@ -117,7 +118,7 @@ sub infix($@)
 	}
 
 	# object used as string
-	return $self->cast('MF::STRING')->infix(@_)
+	return $self->cast('MF::STRING', $context)->infix(@_)
 		if $op eq '~';
 
 	error __x"cannot find infix operator '{op}' for ({left} -> {right})",
@@ -158,9 +159,9 @@ sub prefix($)
 
 sub infix($$$)
 {	my $self = shift;
-	my ($op, $right) = @_;
+	my ($op, $right, $context) = @_;
 
-	if(my $r = $right->isa('MF::BOOLEAN') ? $right : $right->cast('MF::BOOLEAN'))
+	if(my $r = $right->isa('MF::BOOLEAN') ? $right : $right->cast('MF::BOOLEAN', $context))
 	{	my $v = $op eq 'and' ? ($self->value and $r->value)
 	  		  : $op eq  'or' ? ($self->value  or $r->value)
 	  		  : $op eq 'xor' ? ($self->value xor $r->value)
@@ -238,26 +239,26 @@ sub cast($)
 
 sub infix($$$)
 {	my $self = shift;
-	my ($op, $right) = @_;
+	my ($op, $right, $context) = @_;
 
 	if($op eq '~')
-	{	my $r = $right->isa('MF::STRING') ? $right : $right->cast('MF::STRING');
+	{	my $r = $right->isa('MF::STRING') ? $right : $right->cast('MF::STRING', $context);
 		return MF::STRING->new(undef, $self->value . $r->value) if $r;
 	}
 	elsif($op eq '=~' || $op eq '!~')
-	{	my $r = $right->isa('MF::REGEXP') ? $right : $right->cast('MF::REGEXP');
+	{	my $r = $right->isa('MF::REGEXP') ? $right : $right->cast('MF::REGEXP', $context);
 		my $v = ! $r ? undef
 			  : $op eq '=~' ? $self->value =~ $r->regexp : $self->value !~ $r->regexp;
 		return MF::BOOLEAN->new(undef, $v // 0) if $r;
 	}
 	elsif($op eq 'like' || $op eq 'unlike')
-	{	my $r = $right->isa('MF::PATTERN') ? $right : $right->cast('MF::PATTERN');
+	{	my $r = $right->isa('MF::PATTERN') ? $right : $right->cast('MF::PATTERN', $context);
 		my $v = ! $r ? undef
 			  : $op eq 'like' ? $self->value =~ $r->regexp : $self->value !~ $r->regexp;
 		return MF::BOOLEAN->new(undef, $v // 0) if $r;
 	}
 	elsif($op eq 'cmp')
-	{	my $r = $right->isa('MF::STRING') ? $right : $right->cast('MF::STRING');
+	{	my $r = $right->isa('MF::STRING') ? $right : $right->cast('MF::STRING', $context);
 		return MF::INTEGER->new(undef, $collate->cmp($self->value, $right->value));
 	}
 
@@ -349,9 +350,9 @@ sub prefix($)
 
 sub infix($$$)
 {	my $self = shift;
-	my ($op, $right) = @_;
+	my ($op, $right, $context) = @_;
 
-	return $self->cast('MF::BOOLEAN')->infix(@_)
+	return $self->cast('MF::BOOLEAN', $context)->infix(@_)
 		if $op eq 'and' || $op eq 'or' || $op eq 'xor';
 
 	if($right->isa('MF::INTEGER') || $right->isa('MF::FLOAT'))
@@ -448,9 +449,9 @@ sub prefix($)
 
 sub infix($$$)
 {	my $self = shift;
-	my ($op, $right) = @_;
+	my ($op, $right, $context) = @_;
 
-	return $self->cast('MF::BOOLEAN')->infix(@_)
+	return $self->cast('MF::BOOLEAN', $context)->infix(@_)
 		if $op eq 'and' || $op eq 'or' || $op eq 'xor';
 
 	if($right->isa('MF::FLOAT') || $right->isa('MF::INTEGER'))
@@ -520,6 +521,8 @@ Attributes: (the date and time attributes combined)
   dt.second  -> INTEGER 34
   dt.fracsec -> FLOAT   34.56
   dt.tz      -> STRING  +0110
+  dt.time    -> TIME    12:23:34.56
+  dt.date    -> DATE    2006-11-21+0110
 =cut
 
 	package MF::DATETIME;
@@ -545,16 +548,20 @@ sub _value($)
 	DateTime->new(@args, time_zone => $tz);
 }
 
+sub _to_time($)
+{	+{ hour => $_[0]->hour, minute => $_[0]->minute, second => $_[0]->second, ns => $_[0]->nanosecond };
+}
+
 sub cast($)
 {	my ($self, $to) = @_;
-		$to eq 'MF::TIME' ? MF::TIME->new(undef, $_[0]->value->clone)
+		$to eq 'MF::TIME' ? MF::TIME->new(undef, _to_time($_[0]->value))
 	  : $to eq 'MF::DATE' ? MF::DATE->new(undef, $_[0]->value->clone)
 	  : $self->SUPER::cast($to);
 }
 
 sub infix($$$@)
 {	my $self = shift;
-	my ($op, $right) = @_;
+	my ($op, $right, $context) = @_;
 
 	if($op eq '+' || $op eq '-')
 	{	my $dt = $self->value->clone;
@@ -563,7 +570,7 @@ sub infix($$$@)
 			return MF::DATETIME->new(undef, $v);
 		}
 		if($op eq '-')
-		{	my $r = $right->isa('MF::DATETIME') ? $right : $right->cast('MF::DATETIME');
+		{	my $r = $right->isa('MF::DATETIME') ? $right : $right->cast('MF::DATETIME', $context);
 			return MF::DURATION->new(undef, $dt->subtract_datetime($right->value));
 		}
 	}
@@ -586,11 +593,17 @@ sub infix($$$@)
 	$self->SUPER::infix(@_);
 }
 
-my %dt_attrs; # none yet
+my %dt_attrs = (
+	'time'  => sub { MF::TIME->new(undef, _to_time($_[0]->value)) },
+	date    => sub { MF::DATE->new(undef, $_[0]->value) },  # dt's are immutable
+	hour    => sub { MF::INTEGER->new(undef, $_[0]->value->hour)  },
+	minute  => sub { MF::INTEGER->new(undef, $_[0]->value->minute) },
+	second  => sub { MF::INTEGER->new(undef, $_[0]->value->second) },
+	fracsec => sub { MF::FLOAT  ->new(undef, $_[0]->value->fractional_second) },
+);
+
 sub attribute($)
-{	   $dt_attrs{$_[1]}
-	|| $MF::DATE::date_attrs{$_[1]} || $MF::TIME::time_attrs{$_[1]}
-	|| $_[0]->SUPER::attribute($_[1]);
+{	   $dt_attrs{$_[1]} || $MF::DATE::date_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]);
 }
 
 #-----------------
@@ -677,23 +690,16 @@ sub cast($)
 	$self->SUPER::cast($to);
 }
 
-sub _sum_tz($$)
-{	my $sum = $_[0]->time_zone->offset_for_datetime + $_[1]->time_zone->offset_for_datetime;
-	my ($sign, $abs) = $sum < 0 ? ('-', -$sum) : ('+', $sum);
-	my $offset = sprintf "%s%02d%02d", $sign, int($abs/3600), $abs % 3600;
-	DateTime::TimeZone::OffsetOnly->new(offset => $offset);
-}
-
 sub infix($$@)
 {	my $self = shift;
-	my ($op, $right) = @_;
+	my ($op, $right, $context) = @_;
 
 	if($op eq '+' && $right->isa('MF::TIME'))
 	{	my $l = $self->value;
 		my $r = $right->value;
 		my $v = DateTime->new(year => $l->year, month => $l->month, day => $l->day,
-			hour => $r->hour, minute => $r->minute, second => $r->second,
-			nanosecond => $r->nanosecond, time_zone => _sum_tz($l, $r));
+			hour => $r->{hour}, minute => $r->{minute}, second => $r->{second},
+			nanosecond => $r->{ns}, time_zone => $l->time_zone);
 
 		return MF::DATETIME->new(undef, $v);
 	}
@@ -703,7 +709,7 @@ sub infix($$@)
 	}
 
 	if($op eq '+' || $op eq '-')
-	{	my $r = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION');
+	{	my $r = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION', $context);
 		! $r || $r->token !~ m/T.*[1-9]/
 			or error __x"only duration with full days with DATE, found '{value}'",
 				value => $r->token;
@@ -714,7 +720,7 @@ sub infix($$@)
 	}
 
 	if($op eq '<=>')
-	{	my $r   = $right->isa('MF::DATE') ? $right : $right->cast('MF::DATE');
+	{	my $r   = $right->isa('MF::DATE') ? $right : $right->cast('MF::DATE', $context);
 		my ($ld, $ltz) = $self->token =~ m/(.{10})(.*)/;
 		my ($rd, $rtz) =    $r->token =~ m/(.{10})(.*)/;
 
@@ -739,18 +745,16 @@ sub attribute($) { $date_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]) }
 
 #-----------------
 =section MF::TIME, a moment during any day
-Usefull to indicate a daily repeating event.  For instance, C<start-backup: 04:00:12>. 
+Usefull to indicate a daily repeating event.  For instance, C<start-backup: 04:00:12>.
+Times do no have a timezone: it only gets a meaning when added to a (local) time.
 
-You can add a short duration to a time: when you cross a day boundery, it is still only
-interpreted for the time itself.
+Time supports numeric comparison.  When you add (C<+>) a (short) duration to a time, it
+will result in a new time (modulo 24 hours).
 
-Time supports numeric comparison, which respects the timezone.
-
-When you add (C<+>) a duration to a time, it will result in a new time module 24 hours.
-
-When you subtract (C<->) one time from another, you will get a duration modulo 24 hours.  This
-does not take possible jumps to and from Daylight Savingstime into account.  When you
-care about that, than create a formular involving the actual date:
+When you subtract (C<->) one time from another, you will get a duration modulo 24 hours.
+This does not take possible jumps to and from Daylight Savingstime into
+account.  When you care about that, than create a formular involving
+the actual date:
 
   bedtime = 23:00:00
   wakeup  = 06:30:00
@@ -759,7 +763,6 @@ care about that, than create a formular involving the actual date:
 
 =examples for time
 
-  17:00:00+0600 # usually keeping track of time-zone
   12:00:34      # lunch-time, in context default time-zone
   23:59:61      # with max leap seconds
   09:11:11.111  # precise time (upto nanoseconds)
@@ -786,52 +789,71 @@ Attributes:
 	package MF::TIME;
 use base 'Math::Formula::Type';
 
+use constant GIGA => 1_000_000_000; 
+
 sub _pattern { '(?:[01][0-9]|2[0-3]) \: [0-5][0-9] \: (?:[0-5][0-9]) (?:\.[0-9]+)?' }
 
 sub _token($)
-{	my $dt   = $_[1];
-	my $ns   = $dt->nanosecond;
-	my $frac = $ns ? sprintf(".%09d", $dt->nanosecond) =~ s/0+$//r : '';
-	$dt->hms . $frac . ($dt->time_zone->name =~ s/UTC$/+0000/r);
+{	my $time = $_[1];
+	my $ns   = $time->{ns};
+	my $frac = $ns ? sprintf(".%09d", $ns) =~ s/0+$//r : '';
+	sprintf "%02d:%02d:%02d%s", $time->{hour}, $time->{minute}, $time->{second}, $frac;
 }
 
 sub _value($)
 {	my ($self, $token) = @_;
-	$token =~ m/^ ([01][0-9]|2[0-3]) \: ([0-5][0-9]) \: ([0-5][0-9]) (?:(\.[0-9]+))? ([+-][0-9]{4})? $/x
+	$token =~ m/^ ([01][0-9]|2[0-3]) \: ([0-5][0-9]) \: ([0-5][0-9]) (?:(\.[0-9]+))? $/x
 		or return;
 
-	my $tz_offset = $5 // '+0000';  # careful with named matches :-(
-
-	# DateTime requires a year
-	my @args = (year => 2000, month => 1, day => 1, hour => $1, minute => $2, second => $3, nanosecond => ($4 //0) * 1_000_000_000);
-	my $tz = DateTime::TimeZone::OffsetOnly->new(offset => $tz_offset // '+0000');
-
-	DateTime->new(@args, time_zone => $tz);
+	+{ hour => $1+0, minute => $2+0, second => $3+0, ns => ($4 //0) * GIGA };
 }
 
 our %time_attrs = (
-	hour     => sub { MF::INTEGER->new(undef, $_[0]->value->hour)  },
-	minute   => sub { MF::INTEGER->new(undef, $_[0]->value->minute) },
-	second   => sub { MF::INTEGER->new(undef, $_[0]->value->second) },
-	fracsec  => sub { MF::FLOAT  ->new(undef, $_[0]->value->fractional_second) },
-	tz       => sub { MF::STRING ->new(undef, $_[0]->value->time_zone->name) },
+	hour     => sub { MF::INTEGER->new(undef, $_[0]->value->{hour})  },
+	minute   => sub { MF::INTEGER->new(undef, $_[0]->value->{minute}) },
+	second   => sub { MF::INTEGER->new(undef, $_[0]->value->{second}) },
+	fracsec  => sub { my $t = $_[0]->value; MF::FLOAT->new(undef, $t->{second} + $t->{ns}/GIGA) },
 );
 
 sub attribute($) { $time_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]) }
 
+sub _sec_diff($$)
+{	my ($self, $diff, $ns) = @_;
+	if($ns < 0)       { $ns += GIGA; $diff -= 1 }
+	elsif($ns > GIGA) { $ns -= GIGA; $diff += 1 }
+
+	my $sec = $diff % 60;  $diff /= 60;
+	my $min = $diff % 60;
+	my $hrs = ($diff / 60) % 24;
+	+{ hour => $hrs, minute => $min, second => $sec, nanosecond => $ns};
+}
+
 sub infix($$@)
 {	my $self = shift;
-	my ($op, $right) = @_;
+	my ($op, $right, $context) = @_;
 
 	if($op eq '+' || $op eq '-')
-	{	if($r->isa('MF::TIME')
-		{	
+	{	# normalization is a pain, so bluntly convert to seconds
+		my $time = $self->value;
+		my $was  = $time->{hour} * 3600 + $time->{minute} * 60 + $time->{second};
+
+		if(my $r = $right->isa('MF::TIME') ? $right : $right->cast('MF::TIME', $context))
+		{	my $v    = $r->value;
+			my $min  = $v->{hour} * 3600 + $v->{minute} * 60 + $v->{second};
+			my $diff = $self->_sec_diff($was - $min, $time->{ns} - $v->{ns});
+			my $frac = $diff->{nanosecond} ? sprintf(".%09d", $diff->{nanosecond}) =~ s/0+$//r : '';
+			return MF::DURATION->new(sprintf "PT%dH%dM%d%sS", $diff->{hour}, $diff->{minute},
+				$diff->{second}, $frac);
 		}
 
-		if(my $r = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION'))
-	 	{	my $dt = $self->value->clone;
-			my $v  = $op eq '+' ? $dt->add_duration($right->value) : $dt->subtract_duration($right->value);
-			return MF::TIME->new(undef, $v);
+		if(my $r = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION', $context))
+	 	{	my (undef, $hours, $mins, $secs, $ns) =
+				$r->value->in_units(qw/days hours minutes seconds nanoseconds/);
+
+			my $dur  = $hours * 3600 + $mins * 60 + $secs;
+			my $diff = $op eq '+' ? $was + $dur       : $was - $dur;
+			my $nns  = $op eq '+' ? $time->{ns} + $ns : $time->{ns} - $ns;
+			return MF::TIME->new(undef, $self->_sec_diff($diff, $ns));
 		}
 	}
 
@@ -905,20 +927,20 @@ sub prefix($)
 
 sub infix($$@)
 {	my $self = shift;
-	my ($op, $right) = @_;
+	my ($op, $right, $context) = @_;
 
 	if($op eq '+' || $op eq '-')
-	{	my $r  = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION');
+	{	my $r  = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION', $context);
 		my $v  = $self->value->clone;
 		my $dt = ! $r ? undef : $op eq '+' ? $v->add_duration($r->value) : $v->subtract_duration($r->value);
 		return MF::DURATION->new(undef, $dt) if $r;
 	}
 	elsif($op eq '*')
-	{	my $r  = $right->isa('MF::INTEGER') ? $right : $right->cast('MF::INTEGER');
+	{	my $r  = $right->isa('MF::INTEGER') ? $right : $right->cast('MF::INTEGER', $context);
 		return MF::DURATION->new(undef, $self->value->clone->multiply($r->value)) if $r;
 	}
 	elsif($op eq '<=>')
-	{	my $r  = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION');
+	{	my $r  = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION', $context);
 		return MF::INTEGER->new(undef, DateTime::Duration->compare($self->value, $r->value)) if $r;
 	}
 
@@ -985,9 +1007,17 @@ sub validated($$)
 	$class->new($name);
 }
 
-sub _compute($$)
-{	my ($self, $context, $expr) = @_;
- 	$context->evaluate($self->token);
+sub cast(@)
+{	my ($self, $type, $context) = @_;
+	$context->evaluate($self->token, expect => $type);
+}
+
+sub infix(@)
+{	my $self = shift;
+	my ($op, $right, $context) = @_;
+
+	my $left = $context->evaluate($self->token);
+	$left ? $left->infix(@_) : undef;
 }
 
 #-----------------

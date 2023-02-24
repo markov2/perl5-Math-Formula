@@ -30,7 +30,7 @@ my $node = MF::DATETIME->new('2023-02-20T20:17:13+0100');
 
 my $time = $node->cast('MF::TIME');
 isa_ok $time, 'MF::TIME';
-is $time->token, '20:17:13+0100';
+is $time->token, '20:17:13';
 
 my $date = $node->cast('MF::DATE');
 isa_ok $date, 'MF::DATE';
@@ -77,6 +77,8 @@ my @attrs = (
 	[ 4,         'MF::INTEGER', "$dt.second"  ],
 	[ 4.5678,    'MF::FLOAT',   "$dt.fracsec" ],
 	[ '"+0910"', 'MF::STRING',  "$dt.tz"      ],
+	[ '02:03:04.5678',   'MF::TIME', "$dt.time" ],
+	[ '2006-11-21+0910', 'MF::DATE', "$dt.date" ],
 );
 
 foreach (@infix, @attrs)

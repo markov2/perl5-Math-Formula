@@ -34,19 +34,6 @@ my $random = DateTime->new(year => 2023, month => 2, day => 20,
 my $node1a = MF::DATE->new(undef, $random);
 is $node1a->token, '2023-02-20+0100', 'format';
 
-=pod XXX Thinking about this
-
-my $utc = DateTime::TimeZone::OffsetOnly->new(offset => '+0000');
-
-my $node1b = MF::DATE->new('2012-03-05+0000');
-is $node1b->token('2012-03-05');
-
-my $node1b = MF::DATE->new(undef, DateTime->new(year => 2023, month => 2, day => 20,
-	time_zone => $utc);
-is $node1b->token('2012-03-05');
-
-=cut
-
 ### CASTING
 
 my $node2 = MF::DATE->new('2023-01-01+0200')->cast('MF::DATETIME');
@@ -72,7 +59,7 @@ my @infix = (
 	[ '2023-02-18+0200', 'MF::DATE', '2023-02-21+0200 - P3D' ],
 	[ '2023-02-24+0200', 'MF::DATE', '2023-02-21+0200 + P3DT0H' ],
 
-	[ '2012-03-08T06:07:08+0300', 'MF::DATETIME', '2012-03-08+0100 + 06:07:08+0200' ],
+	[ '2012-03-08T06:07:08+0100', 'MF::DATETIME', '2012-03-08+0100 + 06:07:08' ],
 
 	[ 'P1M6D', 'MF::DURATION', '2023-02-26 - 2023-01-20' ],
 
