@@ -50,7 +50,7 @@ foreach (@infix)
 {	my ($result, $rule) = @$_;
 
 	$expr->_test($rule);
-	is $expr->evaluate({})->token, $result, "$rule -> $result";
+	is $expr->evaluate->token, $result, "$rule -> $result";
 }
 
 done_testing;

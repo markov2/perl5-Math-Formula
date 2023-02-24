@@ -10,6 +10,7 @@ use strict;
 use utf8;
 
 use Log::Report 'math-formula';
+use Scalar::Util qw/blessed/;
 
 use Math::Formula::Token;
 use Math::Formula::Type;
@@ -21,15 +22,13 @@ Math::Formula - expressions on steriods
 =chapter SYNOPSIS
 
   my $formula = Math::Formula->new('size', '42k + 324', %options);
-  my $size    = $formula->evaluate($context, expect => 'MF::INTEGER');
+  my $size    = $formula->evaluate;
 
-Or better
+  my $context = Math::Formula::Context->new(name => 'example');
+  $context->add( { size => '42k', header => '324', total => 'size+header' });
+  my $total   = $context->value(total);
 
-  $context->add(size => '42k + 324');
-  my $size = $context->calc('size', expect => 'MF::INTEGER');
-  my $size = $context->value('size');
-
-  my $formula = Math::Formula->new('size', \&own_sub, %options);
+  my $formula = Math::Formula->new(size => \&own_sub, %options);
 
 =chapter DESCRIPTION
 
@@ -91,12 +90,13 @@ can refer to each other via this name.
 The expression is usually a (utf8) string, which will get parsed and
 evaluated on demand.
 
-As special hook,, you may also provide a CODE as $expression.  This will
+As special hook, you may also provide a CODE as $expression.  This will
 be called as
 
   $expression->($context, $this_formula, %options_to_evaluate);
 
-The expression MUST return any M<Math::Formula::Type> object.
+Optimally, the expression returns any M<Math::Formula::Type> object.  Otherwise,
+autodetection kicks in.  More details below in L<Math::Formula::Context/CODE as expression>.
 =cut
 
 sub new(%)
@@ -153,13 +153,12 @@ sub _test($$)
 ###
 
 my $multipliers = MF::INTEGER->_multipliers;
-my $match_float = MF::FLOAT->_pattern;
-my $match_name  = MF::NAME->_pattern;
-my $match_date  = MF::DATE->_pattern;
-my $match_time  = MF::TIME->_pattern;
-my $match_tz    = '[+-][0-9]{4}';
-
-my $match_duration = MF::DURATION->_pattern;
+my $match_float = MF::FLOAT->_match;
+my $match_name  = MF::NAME->_match;
+my $match_date  = MF::DATE->_match;
+my $match_time  = MF::TIME->_match;
+my $match_dt    = MF::DATETIME->_match;
+my $match_dur   = MF::DURATION->_match;
 
 my $match_op    = join '|',
 	'[*\/+\-#~.%]',
@@ -186,14 +185,11 @@ sub _tokenize($)
 							(?{ push @t, MF::STRING->new($+) })
 		| ( \' (?: \\\' | [^'] )* \' )
 							(?{ push @t, MF::STRING->new($+) })
-		| ( $match_duration )
-							(?{ push @t, MF::DURATION->new($+) })
+		| ( $match_dur )	(?{ push @t, MF::DURATION->new($+) })
 		| ( $match_op )		(?{ push @t, MF::OPERATOR->new($+) })
 		| ( $match_name )	(?{ push @t, MF::NAME->new($+) })
-		| ( $match_date T $match_time (?: $match_tz )? )
-							(?{ push @t, MF::DATETIME->new($+) })
-		| ( $match_date (?: $match_tz )? )
-							(?{ push @t, MF::DATE->new($+) })
+		| ( $match_dt )		(?{ push @t, MF::DATETIME->new($+) })
+		| ( $match_date )	(?{ push @t, MF::DATE->new($+) })
 		| ( $match_time )	(?{ push @t, MF::TIME->new($+) })
 		| ( $match_float )	(?{ push @t, MF::FLOAT->new($+) })
 		| ( [0-9][0-9_]*(?:$multipliers)? )
@@ -256,7 +252,6 @@ sub _build_ast($$)
 		my $next = $t->[0]
 			or return $first;   # end of expression
 
-ref $next or warn $next;
 		ref $next eq 'MF::OPERATOR'
 			or error __x"expression '{name}', expected infix operator but found '{type}'",
 				name => $self->name, type => ref $next;
@@ -280,8 +275,10 @@ ref $next or warn $next;
 #--------------------------
 =section Running
 
-=method evaluate $context, %options
-Calculate the value for this expression given the $context.
+=method evaluate [ $context, %options ]
+Calculate the value for this expression given the $context.  The Context groups the expressions
+together so they can refer to eachother.  When the expression does not contain Names, than you
+may go without context.
 
 =option  expect %type
 =default expect <any ::Type>
@@ -295,12 +292,50 @@ sub evaluate($)
 	my $expr   = $self->expression;
 
 	my $result = ref $expr eq 'CODE'
-	  ? $expr->($context, $self, %args)
+	  ? $self->toType($expr->($context, $self, %args))
 	  : $self->tree($expr)->_compute($context, $self);
 
 	# For external evaluation calls, we must follow the request
 	my $expect = $args{expect} || $self->returns;
 	$result && $expect && ! $result->isa($expect) ? $result->cast($expect) : $result;
+}
+
+=method toType $data
+Convert internal Perl data into a Math::Formula internal types.  Sometimes this guess cannot
+go wrong, in other cases a small mistake is not problematic.
+
+In a small number of cases, auto-detection may break: is C<'true'> a boolean or a string?
+Gladly, all types will be cast into a string when needed; a wrong guess without consequences.
+It is preferred that your CODE expressions return explicit types.
+
+See M<Math::Formula::Context/CODE as expression> for details.
+=cut
+
+my %_match = map { my $match = $_->_match; ( $_ => qr/^$match$/x ) }
+	qw/MF::DATETIME MF::TIME MF::DATE MF::DURATION/;
+
+sub toType($)
+{	my ($self, $data) = @_;
+	if(blessed $data)
+	{	return $data if $data->isa('Math::Formula::Type');  # explicit type
+		return MF::DATETIME->new(undef, $data) if $data->isa('DateTime');
+		return MF::DURATION->new(undef, $data) if $data->isa('DateTime::Duration');
+		return MF::FRAGMENT->new($data->name, $data) if $data->isa('Math::Formula::Context');
+	}
+
+	my $match = sub { my $type = shift; my $match = $type->_match; qr/^$match$/ };
+
+	return 
+	    $data =~ /^[+-]?[0-9]+$/         ? MF::INTEGER->new(undef, $data)
+	  : $data =~ /^[+-]?[0-9]+\./        ? MF::FLOAT->new(undef, $data)
+	  : $data =~ /^(?:true|false)$/      ? MF::BOOLEAN->new($data)
+	  : ref $data eq 'Regexp'            ? MF::REGEXP->new(undef, $data)
+	  : $data =~ $_match{'MF::DATETIME'} ? MF::DATETIME->new($data)
+	  : $data =~ $_match{'MF::TIME'}     ? MF::TIME->new($data)
+	  : $data =~ $_match{'MF::DATE'}     ? MF::DATE->new($data)
+	  : $data =~ $_match{'MF::DURATION'} ? MF::DURATION->new($data)
+	  : $data =~ /^(['"]).*\1$/          ? MF::STRING->new($data)
+	  :                                    MF::STRING->new(undef, $data);
 }
 
 #--------------------------
@@ -379,6 +414,7 @@ smaller, equal, larger.
 
 String comparison uses L<Unicode::Collate>, which might be a bit expensive,
 but at least a better attempt to order utf8 correctly.
+
 =cut
 
 1;

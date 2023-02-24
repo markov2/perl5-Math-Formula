@@ -35,4 +35,12 @@ isa_ok $res1, 'MF::INTEGER', '... result';
 is $res1->value, 42, 'Yeh!!';
 
 
+### NESTED CONTEXTS (finally!)
+
+my $system = Math::Formula::Context->new(name => 'system');
+$system->addFormula(os => '"linux"');
+$context->addFragment($system);
+
+is $context->evaluate("#system.os"), 'linux';
+
 done_testing;

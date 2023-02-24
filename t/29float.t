@@ -11,7 +11,7 @@ my $expr = Math::Formula->new(test => 1);
 
 ### TOKENIZING
 
-my $p = MF::FLOAT->_pattern;
+my $p = MF::FLOAT->_match;
 foreach my $token ( qw/0.0 0e+0 1.345 7e+10 12.231e-10/ )
 {	ok $token =~ qr/$p/xo, $token;
 	is_deeply $expr->_tokenize($token),    [ MF::FLOAT->new($token) ];
@@ -58,7 +58,7 @@ foreach (@prefix)
 {	my ($result, $type, $rule) = @$_;
 
 	$expr->_test($rule);
-	my $eval = $expr->evaluate({});
+	my $eval = $expr->evaluate;
 	is $eval->token, $result, "$rule -> $result";
 	isa_ok $eval, $type;
 }
@@ -92,7 +92,7 @@ foreach (@infix)
 {	my ($result, $type, $rule) = @$_;
 
 	$expr->_test($rule);
-	my $eval = $expr->evaluate({});
+	my $eval = $expr->evaluate;
 	is $eval->token, $result, "$rule -> $result";
 	isa_ok $eval, $type;
 }

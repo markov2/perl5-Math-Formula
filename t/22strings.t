@@ -69,7 +69,7 @@ foreach (@infix, @attrs)
 {	my ($result, $type, $rule) = @$_;
 
 	$expr->_test($rule);
-	my $eval = $expr->evaluate({});
+	my $eval = $expr->evaluate;
 	is $eval->token, $result, "$rule -> $result";
 	isa_ok $eval, $type;
 }

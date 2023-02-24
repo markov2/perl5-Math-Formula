@@ -165,6 +165,24 @@ Returns the formula with this specified name.
 
 sub formula($) { $_[0]->{MFC_forms}{$_[1]} }
 
+=method addFragment [$name], $fragment
+A $fragment is simply a different Context.  Fragments are addressed via the '#'
+operator.
+=cut
+
+sub addFragment($;$)
+{	my $self = shift;
+	my ($name, $fragment) = @_==2 ? @_ : ($_[0]->name, $_[0]);
+	$self->{MFC_frags}{$name} = $fragment;
+}
+
+=method fragment $name
+Returns the fragment (context) with $name.  This is not sufficient to switch
+between contexts, which is done during execution.
+=cut
+
+sub fragment($) { $_[0]->{MFC_frags}{$_[1]} }
+
 =method evaluate $name, %options
 Evaluate the expresion with the $name.  Returns a types object, or C<undef>
 when not found.
@@ -180,7 +198,6 @@ sub evaluate($$%)
 	my $form = $self->formula($name);
 	unless($form)
 	{	warning __x"no formula '{name}' in {context}", name => $name, context => $self->name;
-panic;
 		return undef;
 	}
 
@@ -193,10 +210,6 @@ panic;
 	delete $claims->{$name};
 	$result;
 }
-
-#--------------
-=section Caching
-=cut
 
 #--------------
 =chapter DETAILS
@@ -223,7 +236,7 @@ The way to create an interface looks: (first the long version)
   }
 
   my $name      = $object->name;  # f.i. "file"
-  my $interface = MF::OBJECT->new($name);
+  my $interface = Math::Formala::Context->new(name => $name);
   $interface->addAttribute(size => \&handle_size);
   $context->addFragment($interface);
 
@@ -235,7 +248,7 @@ Of course, there are various simplifications possible, when the calculations
 are not too complex:
 
   my $filename  = '...';
-  $context->addFragment(file =>
+  my $fragment = Math::Formula::Context->new(name => 'file',
     attributes => {
       name     => $filename
       size     => sub { MF::INTEGER->new(-s $filename) },
@@ -243,6 +256,11 @@ are not too complex:
     });
   $context->addAttribute(allocate => '#file.size * 10k');
   print $context->value('#file.allocate');
+
+In above example, the return type of the CODE for C<size> is explicit: this is
+the fastest and safest way to return data.  However, it can also be guessed:
+
+      size     => sub { -s $filename },
 
 For clarity: the three syntaxes:
 
@@ -252,6 +270,54 @@ For clarity: the three syntaxes:
   #file           interface to an object, registered in the context
   #file.size      an attribute to an object
   #filesys.file(name).size   file(name) produces an object
+
+=section CODE as expression
+
+It should be the common practice to use strings as expressions.  Those strings get
+tokenized and evaluated.  However, when you need calculations which are not offered
+by this module, or need connections to objects (see fragments in M<Math::Formula::Context>),
+then you will need CODE references as expression.
+
+The CODE reference returns either an B<explicit type> or a guessed type.
+When the type is explicit, you MUST decide whether the data is a "token"
+(in normalized string representation) or a "value" (internal data format).
+
+Math::Formula's internal types are bless ARRAYs with (usually) two fields.
+The first is the I<token>, the second the I<value>.  When the token is
+known, but the value is needed, the token will get parsed.  And vice
+versa: the token can be generated from the value when required.
+
+Some examples of explicit return object generation:
+
+  my $int = MF::INTEGER->new("3k", undef);  # token 3k given
+  my $int = MF::INTEGER->new("3k");         # same
+  say $int->token;  -> 3k
+  say $int->value;  -> 3000                 # now, conversion was run
+
+  my $dt  = DateTime->now;
+  my $now = MF::DATETIME->new(undef, $dt);  # value is given
+  my $dt2 = $now->value;                    # returns $dt
+  say $now->token;  -> 2032-02-24T10:00:15+0100
+
+See M<Math::Formula::Type> for detailed explanation for the types which
+can be returned.  These are the types with examples for tokens and values:
+
+  MF::BOOLEAN   'true'            1        # anything !=0 is true
+  MF::STRING    '"tic"'           'tic'    # the token has quotes!
+  MF::INTEGER   '42'              42
+  MF::FLOAT     '3.14'            3.14
+  MF::DATETIME  '2023-...T09:...' DateTime-object
+  MF::DATE      '2023-02-24+0100' DateTime-object
+  MF::TIME      '09:12:24'        some HASH
+  MF::DURATION  'P3Y2MT12M'       DateTime::Duration-object
+  MF::NAME      'tac'             'tac'
+  MF::PATTERN   '"*c"'            qr/^.*c$/
+  MF::REGEXP    '"a.b"'           qr/^a.b$/
+  MF::FRAGMENT  'toe'             ::Context-object
+
+When you decide to be lazy, Math::Formula will attempt to auto-detect the
+type.  This is helped by the fact that operator will cast types which they
+need, for instance FLOAT to INTEGER or the reverse.
 
 =cut
 

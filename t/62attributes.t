@@ -20,7 +20,7 @@ is_deeply $attr1->($node1), MF::INTEGER->new(undef, 2), 'correct result';
 my $expr = Math::Formula->new(test => "02:03:04.hour");
 isa_ok $expr, 'Math::Formula', 'created expression';
 
-my $result = $expr->evaluate({});
+my $result = $expr->evaluate;
 ok defined $result, 'got a result';
 
 isa_ok $result, 'MF::INTEGER', 'correct result type';

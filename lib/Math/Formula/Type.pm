@@ -430,7 +430,7 @@ integers.
 use base 'Math::Formula::Type';
 use POSIX  qw/floor/;
 
-sub _pattern  { '[0-9]+ (?: \.[0-9]+ (?: e [+-][0-9]+ )? | e [+-][0-9]+ )' }
+sub _match  { '[0-9]+ (?: \.[0-9]+ (?: e [+-][0-9]+ )? | e [+-][0-9]+ )' }
 sub _value($) { $_[1] + 0.0 }
 sub _token($) { my $t = sprintf '%g', $_[1]; $t =~ /[e.]/ ?  $t : "$t.0" }
 
@@ -529,6 +529,13 @@ Attributes: (the date and time attributes combined)
 
 use base 'Math::Formula::Type';
 use DateTime ();
+ 
+sub _match {
+	  '[12][0-9]{3} \- (?:0[1-9]|1[012]) \- (?:0[1-9]|[12][0-9]|3[01]) T '
+	. '(?:[01][0-9]|2[0-3]) \: [0-5][0-9] \: (?:[0-5][0-9]) (?:\.[0-9]+)?'
+	. '(?:[+-][0-9]{4})?';
+
+}
 
 sub _token($) { $_[1]->datetime . ($_[1]->time_zone->name =~ s/UTC$/+0000/r) }
 
@@ -654,7 +661,7 @@ use Log::Report 'math-formula', import => [ qw/error warning __x/ ];
 use DateTime::TimeZone  ();
 use DateTime::TimeZone::OffsetOnly ();
 
-sub _pattern { '[12][0-9]{3} \- (?: 0[1-9] | 1[012] ) \- (?: 0[1-9]|[12][0-9]|3[01])' }
+sub _match { '[12][0-9]{3} \- (?:0[1-9]|1[012]) \- (?:0[1-9]|[12][0-9]|3[01]) (?:[+-][0-9]{4})?' }
 
 sub _token($) { $_[1]->ymd . ($_[1]->time_zone->name =~ s/UTC$/+0000/r) }
 
@@ -791,7 +798,7 @@ use base 'Math::Formula::Type';
 
 use constant GIGA => 1_000_000_000; 
 
-sub _pattern { '(?:[01][0-9]|2[0-3]) \: [0-5][0-9] \: (?:[0-5][0-9]) (?:\.[0-9]+)?' }
+sub _match { '(?:[01][0-9]|2[0-3]) \: [0-5][0-9] \: (?:[0-5][0-9]) (?:\.[0-9]+)?' }
 
 sub _token($)
 {	my $time = $_[1];
@@ -901,7 +908,7 @@ use base 'Math::Formula::Type';
 
 use DateTime::Duration ();
 
-sub _pattern { '[+-]? P (?:[0-9]+Y)? (?:[0-9]+M)? (?:[0-9]+D)? '
+sub _match { '[+-]? P (?:[0-9]+Y)? (?:[0-9]+M)? (?:[0-9]+D)? '
 	. ' (?:T (?:[0-9]+H)? (?:[0-9]+M)? (?:[0-9]+(?:\.[0-9]+)?S)? )? \b';
 }
 
@@ -990,7 +997,7 @@ use base 'Math::Formula::Type';
 use Log::Report 'math-formula', import => [ qw/error __x/ ];
 
 my $pattern = '[_\p{Alpha}][_\p{AlNum}]*';
-sub _pattern() { $pattern }
+sub _match() { $pattern }
 
 =c_method validated $string, $where
 Create a MF::NAME from a $string which needs to be validated for being a valid
@@ -1129,10 +1136,6 @@ use Log::Report 'math-formula', import => [ qw/panic error __x/ ];
 =default attributes {}
 Initial attributes, addressed with infix operator C<.> (dot).
 
-=option  fragments HASH
-=default fragments {}
-Initial fragments, addressed with infix operator C<#> (sharp).
-
 =cut
 
 sub new(@)
@@ -1140,7 +1143,6 @@ sub new(@)
 
 	my $self = $class->SUPER::new($name, $context,
 		$args{attributes} || {},
-		$args{fragments}  || {},
 	);
 
 	$self;
@@ -1151,10 +1153,11 @@ sub context { $_[0]->value }
 
 sub infix($$@)
 {	my $self = shift;
-	my ($op, $right) = @_;
+	my ($op, $right, $context) = @_;
 
 	if($op eq '#' && $right->isa('MF::NAME'))
-	{	...
+	{	return $self->context->fragment($self->token)->evaluate
+  #!!! context switch
 	}
 
 	$self->SUPER::infix(@_);
@@ -1171,11 +1174,6 @@ sub addAttribute($$)
 sub attribute($)
 {	my ($self, $name) = @_;
 	$self->[2]{$name} || $self->SUPER::attribute($name);
-}
-
-sub _fragment($)
-{	my ($self, $name) = @_;
-	$self->[3]{$name};
 }
 
 1;
