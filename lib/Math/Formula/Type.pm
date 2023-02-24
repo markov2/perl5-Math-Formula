@@ -221,6 +221,13 @@ use base 'Math::Formula::Type';
 use Unicode::Collate ();
 my $collate = Unicode::Collate->new;  #XXX which options do we need?
 
+# Perl's false is 'undef': convert it to '0'
+sub new($$@)
+{	my ($class, $token, $value) = (shift, shift, shift);
+	$value //=0 unless defined $token;
+	$class->SUPER::new($token, $value, @_);
+}
+
 sub _token($) { '"' . ($_[1] =~ s/[\"]/\\$1/gr) . '"' }
 
 sub _value($)
@@ -234,8 +241,8 @@ sub _value($)
 sub cast($)
 {	my ($self, $to) = @_;
 
-	  $to eq 'MF::REGEXP'  ? MF::REGEXP->_from_string($_[0])
-	: $to eq 'MF::PATTERN' ? MF::PATTERN->_from_string($_[0])
+	  ref $self eq __PACKAGE__ && $to eq 'MF::REGEXP'  ? MF::REGEXP->_from_string($self)
+	: ref $self eq __PACKAGE__ && $to eq 'MF::PATTERN' ? MF::PATTERN->_from_string($self)
 	: $self->SUPER::cast($to);
 }
 
@@ -251,13 +258,14 @@ sub infix($$$)
 	{	my $r = $right->isa('MF::REGEXP') ? $right : $right->cast('MF::REGEXP', $context);
 		my $v = ! $r ? undef
 			  : $op eq '=~' ? $self->value =~ $r->regexp : $self->value !~ $r->regexp;
-		return MF::BOOLEAN->new(undef, $v // 0) if $r;
+		return MF::BOOLEAN->new(undef, $v) if $r;
 	}
 	elsif($op eq 'like' || $op eq 'unlike')
-	{	my $r = $right->isa('MF::PATTERN') ? $right : $right->cast('MF::PATTERN', $context);
+	{	# When expr is CODE, it may produce a qr// instead of a pattern.
+		my $r = $right->isa('MF::PATTERN') || $right->isa('MF::REGEXP') ? $right : $right->cast('MF::PATTERN', $context);
 		my $v = ! $r ? undef
 			  : $op eq 'like' ? $self->value =~ $r->regexp : $self->value !~ $r->regexp;
-		return MF::BOOLEAN->new(undef, $v // 0) if $r;
+		return MF::BOOLEAN->new(undef, $v) if $r;
 	}
 	elsif($op eq 'cmp')
 	{	my $r = $right->isa('MF::STRING') ? $right : $right->cast('MF::STRING', $context);

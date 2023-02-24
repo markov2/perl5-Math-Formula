@@ -2,5 +2,11 @@
 
 All changes made by Mark Overmeer, unless explicitly stated otherwise.
 
+version 0.11:
+
+	Fixes:
+	- module name registrations for PAUSE
+	- handle accidental MF::REGEXP on 'like'
+
 version 0.10: Fri 24 Feb 15:08:56 CET 2023
 	- initial release, for final documentation clean-ups, to test pause etc

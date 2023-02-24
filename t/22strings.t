@@ -74,7 +74,4 @@ foreach (@infix, @attrs)
 	isa_ok $eval, $type;
 }
 
-
-
-
 done_testing;
