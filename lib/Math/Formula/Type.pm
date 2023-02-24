@@ -534,7 +534,6 @@ sub _match {
 	  '[12][0-9]{3} \- (?:0[1-9]|1[012]) \- (?:0[1-9]|[12][0-9]|3[01]) T '
 	. '(?:[01][0-9]|2[0-3]) \: [0-5][0-9] \: (?:[0-5][0-9]) (?:\.[0-9]+)?'
 	. '(?:[+-][0-9]{4})?';
-
 }
 
 sub _token($) { $_[1]->datetime . ($_[1]->time_zone->name =~ s/UTC$/+0000/r) }
@@ -1016,6 +1015,12 @@ sub validated($$)
 
 sub cast(@)
 {	my ($self, $type, $context) = @_;
+
+	if($type->isa('MF::FRAGMENT'))
+	{	my $frag = $context->fragment($self->token);
+		return $frag if $frag;
+	}
+
 	$context->evaluate($self->token, expect => $type);
 }
 
@@ -1155,9 +1160,9 @@ sub infix($$@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
 
-	if($op eq '#' && $right->isa('MF::NAME'))
-	{	return $self->context->fragment($self->token)->evaluate
-  #!!! context switch
+	if($op eq '#')
+	{	my $r = $right->isa('MF::FRAGMENT') ? $right : $right->cast('MF::FRAGMENT', $context);
+		return $r if $r;
 	}
 
 	$self->SUPER::infix(@_);

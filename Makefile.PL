@@ -5,14 +5,18 @@ use 5.012;
 
 WriteMakefile
   ( NAME	 => 'Math::Formula'
-  , VERSION      => '1.00'
+  , VERSION      => '0.10'
   , PREREQ_PM    =>
     { 'Test::More'   => 0,
     , 'Log::Report'  => 0,
+	, 'POSIX'        => 0,
+	, 'Scalar::Util' => 0,
 
 	, 'DateTime'           => 0,
 	, 'DateTime::Duration' => 0,
     , 'DateTime::Format::Duration::ISO8601' => 0,
+	, 'DateTime::TimeZone' => 0,
+	, 'DateTime::TimeZone::OffsetOnly' => 0,
     }
   , AUTHOR       => 'Mark Overmeer <markov@cpan.org>'
   , ABSTRACT     => 'Expressions on steriods'

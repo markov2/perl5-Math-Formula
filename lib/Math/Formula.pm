@@ -96,7 +96,13 @@ be called as
   $expression->($context, $this_formula, %options_to_evaluate);
 
 Optimally, the expression returns any M<Math::Formula::Type> object.  Otherwise,
-autodetection kicks in.  More details below in L<Math::Formula::Context/CODE as expression>.
+autodetection kicks in.  More details below in L<Math::Formula::Context/"CODE as expression">.
+
+=option  returns $type
+=default returns C<undef>
+Enforce that the type produced by the calculation of this $type.  Otherwise, it may
+be different when other people are permitted to configure the formulas... people can
+make mistakes.
 =cut
 
 sub new(%)
@@ -308,7 +314,7 @@ In a small number of cases, auto-detection may break: is C<'true'> a boolean or 
 Gladly, all types will be cast into a string when needed; a wrong guess without consequences.
 It is preferred that your CODE expressions return explicit types.
 
-See M<Math::Formula::Context/CODE as expression> for details.
+See M<Math::Formula::Context/"CODE as expression"> for details.
 =cut
 
 my %_match = map { my $match = $_->_match; ( $_ => qr/^$match$/x ) }

@@ -30,7 +30,8 @@ values: it runs the right expressions.
 =c_method new %options
 Many of the %options make sense when this context is reloaded for file.
 
-=option formula $form|ARRAY
+=option  formula $form|ARRAY
+=default formula C< [] >
 One or more formula, passed to M<add()>.
 =cut
 
@@ -49,7 +50,7 @@ sub init($)
 {	my ($self, $args) = @_;
 	my $name   = $self->{MFC_name}   = $args->{name} or error __x"context without a name";
 
-	my $config = $self->{MFC_config} =  MF::FRAGMENT->new(config => $self, attributes => {
+	my $config = $self->{MFC_config} = MF::FRAGMENT->new(config => $self, attributes => {
 		name       => MF::NAME->new($name),
 		mf_version => MF::STRING->new(undef, $Math::Formula::VERSION),
 		version    => $args->{version} ? MF::STRING->new($args->{version}) : undef,
@@ -173,7 +174,7 @@ operator.
 sub addFragment($;$)
 {	my $self = shift;
 	my ($name, $fragment) = @_==2 ? @_ : ($_[0]->name, $_[0]);
-	$self->{MFC_frags}{$name} = $fragment;
+	$self->{MFC_frags}{$name} = MF::FRAGMENT->new($name, $fragment);
 }
 
 =method fragment $name
@@ -209,6 +210,32 @@ sub evaluate($$%)
 
 	delete $claims->{$name};
 	$result;
+}
+
+=method run $expression, %options
+Singleshot an expression: the expression will be run in this context but
+not get a name.  A temporary M<Math::Formula> object is created and
+later destroyed.  The %options are passed to M<Math::Formula::evaluate()>.
+
+=option  name $name
+=default name <caller's filename and linenumber>
+=cut
+
+sub run($%)
+{	my ($self, $expr, %args) = @_;
+	my $name = delete $args{name} || join '#', (caller)[1,2];
+	Math::Formula->new($name, $expr)->evaluate($self, %args);
+}
+
+=method value $expression, %options
+First run the $expression, then return the value of the returned type object.
+All options are passed to M<run()>.
+=cut
+
+sub value($@)
+{	my $self = shift;
+	my $result = $self->run(@_);
+	$result ? $result->value : undef;
 }
 
 #--------------
