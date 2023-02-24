@@ -1075,8 +1075,16 @@ package
 	MF::PATTERN; 
 use base 'MF::STRING';
 
+use Log::Report 'math-formula', import => [ qw/warning __x/ ];
+
+sub _token($) {
+	warning __x"cannot convert qr back to pattern, do {regexp}", regexp => $_[1];
+    "pattern meaning $_[1]";
+}
+
 sub _from_string($)
 {	my ($class, $string) = @_;
+	$string->token;        # be sure the pattern is kept as token: cannot be recovered
 	bless $string, $class;
 }
 
