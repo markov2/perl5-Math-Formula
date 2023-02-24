@@ -5,7 +5,7 @@ use 5.012;
 
 WriteMakefile
   ( NAME	 => 'Math::Formula'
-  , VERSION      => '0.10'
+  , VERSION      => '0.11'
   , PREREQ_PM    =>
     { 'Test::More'   => 0,
     , 'Log::Report'  => 0,

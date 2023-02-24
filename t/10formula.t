@@ -36,7 +36,16 @@ ok defined $answer2, '... got answer';
 isa_ok $answer2, 'Math::Formula::Type', '...';
 cmp_ok $answer2->value, '==', 2;
 
-### autodetection of Code returns
+### Return a node
+
+my $expr3 = Math::Formula->new(π => MF::FLOAT->new(undef, 3.14));
+ok defined $expr3, 'formula with node';
+my $answer3 = $expr3->evaluate;
+ok defined $answer3, '... answer';
+isa_ok $answer3, 'MF::FLOAT', '...';
+is $answer3->token, '3.14';
+
+### auto-detection of Code returns
 
 my $timestamp = '2012-01-03T12:37:03+0410';
 my $dt  = DateTime->new(year => 2012, month => 1, day => 3, hour => 12,

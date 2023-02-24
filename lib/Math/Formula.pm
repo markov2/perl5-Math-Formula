@@ -25,10 +25,11 @@ Math::Formula - expressions on steriods
   my $size    = $formula->evaluate;
 
   my $context = Math::Formula::Context->new(name => 'example');
-  $context->add( { size => '42k', header => '324', total => 'size+header' });
+  $context->add( { size => '42k', header => '324', total => 'size + header' });
   my $total   = $context->value(total);
 
   my $formula = Math::Formula->new(size => \&own_sub, %options);
+  my $formual = Math::Formula->new(π => MF::FLOAT->new(undef, 3.14))
 
 =chapter DESCRIPTION
 
@@ -38,23 +39,24 @@ files for your program.
 
 B<What makes Math::Formula special?> Zillions of expression evaluators
 have been written in the past.  The application where this module was
-written for has special needs.  Thereefore, this expression evaluator can
-do things which are usually hidden behind library calls.
+written for has special needs which were not served by them.
+This expression evaluator can do things which are usually hidden behind
+library calls.
 
-For instance, where are many types which you can use to calculate directly
-(examples far below on this page)
+For instance, where are many types which you can use in your configuration
+lines to calculate directly (examples far down on this page)
 
   true and false               # real booleans
   "abc"  'abc'                 # the usual strings
   7  89k  5Mibi                # integers with multiplier support
-  =~ "c$"                      # regular expressions and patterns
+  =~ "c$"                      # regular expressions
   like "*c"                    # pattern matching
   2023-02-18T01:28:12+0300     # date-times
   2023-02-18                   # dates
   01:18:12                     # times
   P2Y3DT2H                     # duration
   name                         # outcome of other expressions
-  #unit.owner                  # fragments (namespaces)
+  #unit.owner                  # fragments (context, namespaces)
   file.size                    # attributes
   (1 + 2) * 3                  # parenthesis
 
@@ -72,6 +74,14 @@ rules, often with dates and durations in it, to arrange processing.
 Instead of fixed, processed values in my configuration, each line can
 now be a smart expression.  Declarative programming.
 
+=section Plans
+
+=over 4
+=item * the C<?:> (ternary if-then-else)
+=item * parameterized formulas would be nice
+=item * loading and saving contexts in INI, YAML, and JSON format
+=back
+
 =cut
 
 #--------------------------
@@ -88,7 +98,8 @@ can refer to each other via this name.
 
 =requires expression $expression
 The expression is usually a (utf8) string, which will get parsed and
-evaluated on demand.
+evaluated on demand.  The $expresion may also be a prepared node (any
+<Math::Formula::Type> object.
 
 As special hook, you may also provide a CODE as $expression.  This will
 be called as
@@ -286,7 +297,7 @@ Calculate the value for this expression given the $context.  The Context groups 
 together so they can refer to eachother.  When the expression does not contain Names, than you
 may go without context.
 
-=option  expect %type
+=option  expect $type
 =default expect <any ::Type>
 When specified, the result will be of the expected $type or C<undef>.  This overrules
 M<new(returns)>.  Without either, the result type depends on the evaluation of the
@@ -297,9 +308,11 @@ sub evaluate($)
 {	my ($self, $context, %args) = @_;
 	my $expr   = $self->expression;
 
-	my $result = ref $expr eq 'CODE'
-	  ? $self->toType($expr->($context, $self, %args))
-	  : $self->tree($expr)->_compute($context, $self);
+	my $result
+	  = ref $expr eq 'CODE' ? $self->toType($expr->($context, $self, %args))
+	  : ! blessed $expr     ? $self->tree($expr)->_compute($context, $self)
+	  : $expr->isa('Math::Formula::Type') ? $expr
+	  : panic;
 
 	# For external evaluation calls, we must follow the request
 	my $expect = $args{expect} || $self->returns;
@@ -307,14 +320,16 @@ sub evaluate($)
 }
 
 =method toType $data
-Convert internal Perl data into a Math::Formula internal types.  Sometimes this guess cannot
-go wrong, in other cases a small mistake is not problematic.
+Convert internal Perl data into a Math::Formula internal types.  For most
+times, this guess cannot go wrong. In other cases a mistake is not problematic.
 
-In a small number of cases, auto-detection may break: is C<'true'> a boolean or a string?
-Gladly, all types will be cast into a string when needed; a wrong guess without consequences.
-It is preferred that your CODE expressions return explicit types.
+In a small number of cases, auto-detection may break: is C<'true'> a
+boolean or a string?  Gladly, this types will be cast into a string when
+used as a string; a wrong guess without consequences.  It is preferred
+that your CODE expressions return explicit types: for optimal safety and
+performance.
 
-See M<Math::Formula::Context/"CODE as expression"> for details.
+See L<Math::Formula::Context/"CODE as expression"> for details.
 =cut
 
 my %_match = map { my $match = $_->_match; ( $_ => qr/^$match$/x ) }

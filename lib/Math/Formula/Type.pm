@@ -8,7 +8,7 @@ use base 'Math::Formula::Token';
 #!!! The declarations of all other packages in this file are indented to avoid
 #!!! indexing by CPAN.
 
-use Log::Report 'math-formula', import => [ qw/error __x/ ];
+use Log::Report 'math-formula', import => [ qw/warning error __x/ ];
 
 # Object is an ARRAY. The first element is the token, as read from the formula
 # or constructed from a computed value.  The second is a value, which can be
@@ -109,7 +109,11 @@ sub prefix
 		op => $op, child => $child;
 }
 
-sub attribute { warn "Cannot find attribute $_[1] for ".(ref $_[0]) }
+sub attribute {
+	warning __x"cannot find attribute '{attr}' for {class} '{token}'",
+		attr => $_[1], class => ref $_[0], token => $_[0]->token;
+	undef;
+}
 
 sub infix($@)
 {   my $self = shift;
@@ -117,7 +121,7 @@ sub infix($@)
 
 	if($op eq '.' && $right->isa('MF::NAME'))
 	{	if(my $attr = $self->attribute($right->token))
-		{	return $attr->($self, @_);
+		{	return ref $attr eq 'CODE' ? $attr->($self, @_) : $attr;
 		}
 	}
 
@@ -125,7 +129,7 @@ sub infix($@)
 	return $self->cast('MF::STRING', $context)->infix(@_)
 		if $op eq '~';
 
-	error __x"cannot find infix operator '{op}' for ({left} -> {right})",
+	error __x"cannot match infix operator '{op}' for ({left} -> {right})",
 		op => $op, left => ref $self, right => ref $right;
 }
 

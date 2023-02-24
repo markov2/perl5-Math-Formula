@@ -73,7 +73,7 @@ Contexts are required to have a name.  Usually, this is the name of the fragment
 well.
 
 =method config
-Returns an MF_OBJECT which contains all information other expressions can use about the
+Returns an MF::FRAGMENT which contains all information other expressions can use about the
 active context (or fragment).
 =cut
 
@@ -106,8 +106,8 @@ or a HASH with
   );
   $context->add($form, \%library, $frag);
 
-#XXX example with fragment
 =cut
+#XXX example with fragment
 
 sub add(@)
 {	my $self = shift;
@@ -186,7 +186,7 @@ sub fragment($) { $_[0]->{MFC_frags}{$_[1]} }
 
 =method evaluate $name, %options
 Evaluate the expresion with the $name.  Returns a types object, or C<undef>
-when not found.
+when not found.  The %options are passed to M<Math::Formula::evaluate()>.
 =cut
 
 sub evaluate($$%)
@@ -219,6 +219,7 @@ later destroyed.  The %options are passed to M<Math::Formula::evaluate()>.
 
 =option  name $name
 =default name <caller's filename and linenumber>
+The name may appear in error messages.
 =cut
 
 sub run($%)
@@ -338,13 +339,13 @@ can be returned.  These are the types with examples for tokens and values:
   MF::TIME      '09:12:24'        some HASH
   MF::DURATION  'P3Y2MT12M'       DateTime::Duration-object
   MF::NAME      'tac'             'tac'
-  MF::PATTERN   '"*c"'            qr/^.*c$/
+  MF::PATTERN   '"*c"'            qr/^.*c$/ # like understands MF::REGEXP
   MF::REGEXP    '"a.b"'           qr/^a.b$/
   MF::FRAGMENT  'toe'             ::Context-object
 
 When you decide to be lazy, Math::Formula will attempt to auto-detect the
 type.  This is helped by the fact that operator will cast types which they
-need, for instance FLOAT to INTEGER or the reverse.
+need, for instance MF::FLOAT to MF::INTEGER or the reverse.
 
 =cut
 
