@@ -42,6 +42,19 @@ is $context->value('.name'), 'test', 'context attribute';
 is $context->value('#system.name'), 'system', 'system attribute';
 is $context->value("#system.os"), 'linux', 'system formula';
 
-#is $context->value('aap', expect => 'MF::STRING'), 'aap', 'context attribute';
+ok $context->addFormula(system2 => '#system'), 'shortcut for fragment';
+is $context->value("system2.os"), 'linux', 'system formula';
+
+ok $context->addFormula(os2 => '#system.os'), 'form in fragment';
+is $context->value("os2 ~ ''"), 'linux', 'system formula';
+is $context->value("os2"), 'linux';
+
+ok $context->addFormula(os3 => 'system2.os'), 'form in aliased fragment';
+is $context->value("os3 ~ ''"), 'linux', 'system formula';
+is $context->value("os3"), 'linux';
+
+ok $context->addFormula(size => '"abc".length'), 'aliased attribute';
+is $context->value("size + 0"), '3', 'system formula';
+is $context->value("size"), '3';
 
 done_testing;

@@ -88,11 +88,4 @@ foreach (@blessed, @unblessed)
 	is $result->token, $token;
 }
 
-### No NAME returns
-
-my $result3 = $context->run('tic');
-ok defined $result3, 'Producing a NAME';
-isa_ok $result3, 'MF::NAME';
-is $result3->token, 'tic';
-
 done_testing;

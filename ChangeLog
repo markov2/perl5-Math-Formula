@@ -9,7 +9,7 @@ version 0.11:
 	- handle accidental MF::REGEXP on 'like'
 	- ::Type::new() did not appear in the docs
 	- nested fragments now work
-	- NAMEs cannot be used as value
+	- aliasing of fragments, attributes, formulas
 
 	Improvements:
 	- warn when trying to convert qr to pattern

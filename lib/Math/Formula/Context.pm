@@ -231,8 +231,14 @@ The name may appear in error messages.
 
 sub run($%)
 {	my ($self, $expr, %args) = @_;
-	my $name = delete $args{name} || join '#', (caller)[1,2];
-	Math::Formula->new($name, $expr)->evaluate($self, %args);
+	my $name  = delete $args{name} || join '#', (caller)[1,2];
+	my $result = Math::Formula->new($name, $expr)->evaluate($self, %args);
+
+	while($result && $result->isa('MF::NAME'))
+	{	$result = $self->evaluate($result->token, %args);
+	}
+
+	$result;
 }
 
 =method value $expression, %options
@@ -249,7 +255,7 @@ sub value($@)
 #--------------
 =chapter DETAILS
 
-=section Creating an interface to an object
+=section Creating an interface to an object (fragment)
 
 For safity reasons, the formulars can not directly call methods on data
 objects, but need to use a well defined interface which hides the internals
@@ -306,6 +312,16 @@ For clarity: the three syntaxes:
   #file           interface to an object, registered in the context
   #file.size      an attribute to an object
   #filesys.file(name).size   file(name) produces an object
+
+=section Aliasing
+
+It is possible to produce an alias formula to hide or simplify the fragment.
+This also works for formulas and attributes!
+
+  fs   => '#filesys'         # alias fragment
+  dt   => '#system#datetime' # alias nested fragments
+  size => '"abc".size'       # alias attribute
+  now  => 'dt.now'           # alias formula
 
 =section CODE as expression
 

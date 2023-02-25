@@ -316,7 +316,7 @@ sub evaluate($)
 
 	# For external evaluation calls, we must follow the request
 	my $expect = $args{expect} || $self->returns;
-	$result && $expect && ! $result->isa($expect) ? $result->cast($expect) : $result;
+	$result && $expect && ! $result->isa($expect) ? $result->cast($expect, $context) : $result;
 }
 
 =method toType $data
