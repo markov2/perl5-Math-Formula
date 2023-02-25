@@ -19,7 +19,7 @@ WriteMakefile
 	, 'DateTime::TimeZone::OffsetOnly' => 0,
     }
   , AUTHOR       => 'Mark Overmeer <markov@cpan.org>'
-  , ABSTRACT     => 'Expressions on steriods'
+  , ABSTRACT     => 'Expressions on steroids'
   , LICENSE      => 'perl_5'
 
   , META_MERGE =>

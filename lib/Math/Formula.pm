@@ -17,7 +17,7 @@ use Math::Formula::Type;
 
 =chapter NAME
 
-Math::Formula - expressions on steriods
+Math::Formula - expressions on steroids
 
 =chapter SYNOPSIS
 

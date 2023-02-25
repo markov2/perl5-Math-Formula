@@ -6,6 +6,7 @@ version 0.12:
 
 	Fixes:
 	- require 5.16 for fc().
+	- typo in module description
 
 	Improvements:
 	- attributes of Frasgment (Context) start with 'ctx_'
