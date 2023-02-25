@@ -105,7 +105,7 @@ sub collapsed($) { $_[0]->token =~ s/\s+/ /gr =~ s/^ //r =~ s/ $//r }
 sub prefix()
 {   my ($self, $op, $context) = @_;
 
-	error __x"cannot find prefx operator '{op}' on a ({child})",
+	error __x"cannot find prefx operator '{op}' on a {child}",
 		op => $op, child => ref $self;
 }
 
@@ -218,6 +218,7 @@ utf8 sorting.
 Attributes:
 
    "abc".length       -> INTEGER  3
+   "".is_empty        -> BOOLEAN true   # only white-space
    "ABC".lower        -> STRING "abc", lower-case using utf8 folding
 =cut
 
@@ -284,8 +285,9 @@ sub infix($$$)
 }
 
 my %string_attrs = (
-   length   => sub { MF::INTEGER->new(undef, length($_[0]->value))  },
-   lower    => sub { MF::STRING->new(undef, fc($_[0]->value)) },
+	length   => sub { MF::INTEGER->new(undef, length($_[0]->value))  },
+	is_empty => sub { MF::BOOLEAN->new(undef, $_[0]->value !~ m/\P{Whitespace}/) },
+	lower    => sub { MF::STRING->new(undef, fc($_[0]->value)) },
 );
 
 sub attribute($) { $string_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]) }

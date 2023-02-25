@@ -63,6 +63,10 @@ my @infix = (
 my @attrs = (
 	[  5       => 'MF::INTEGER', '"abcde".length' ],
 	[  '"abc"' => 'MF::STRING',  '"ABC".lower' ],
+	[  'true'  => 'MF::BOOLEAN', '"".is_empty' ],
+	[  'true'  => 'MF::BOOLEAN', '"  ".is_empty' ],
+	[  'true'  => 'MF::BOOLEAN', "' \t\n\r '.is_empty" ],
+	[  'false' => 'MF::BOOLEAN', '"a".is_empty' ],
 );
 
 foreach (@infix, @attrs)

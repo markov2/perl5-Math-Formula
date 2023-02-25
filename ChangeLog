@@ -5,24 +5,25 @@ All changes made by Mark Overmeer, unless explicitly stated otherwise.
 version 0.12:
 
 	Fixes:
-	- require 5.16 for fc()
+	- require 5.16 for fc().
 
 	Improvements:
 	- attributes of Frasgment (Context) start with 'ctx_'
-	- operator 'exists' on names.
+	- prefix operator 'exists' on names.
+	- attribute 'is_empty' on strings.
 
 version 0.11: Sat Feb 25 12:41:37 CET 2023
 
 	Fixes:
-	- module name registrations for PAUSE
-	- handle accidental MF::REGEXP on 'like'
-	- ::Type::new() did not appear in the docs
-	- nested fragments now work
-	- aliasing of fragments, attributes, formulas
+	- module name registrations for PAUSE.
+	- handle accidental MF::REGEXP on 'like'.
+	- ::Type::new() did not appear in the docs.
+	- nested fragments now work.
+	- aliasing of fragments, attributes, formulas.
 
 	Improvements:
-	- warn when trying to convert qr to pattern
-	- textual corrections seen on metacpan
+	- warn when trying to convert qr to pattern.
+	- textual corrections seen on metacpan.
 
 version 0.10: Fri 24 Feb 15:08:56 CET 2023
-	- initial release, for final documentation clean-ups, to test pause etc
+	- initial release, for final documentation clean-ups, to test pause etc.
