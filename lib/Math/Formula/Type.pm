@@ -1023,6 +1023,8 @@ use Log::Report 'math-formula', import => [ qw/error __x/ ];
 my $pattern = '[_\p{Alpha}][_\p{AlNum}]*';
 sub _match() { $pattern }
 
+sub value($) { error __x"name '{name}' cannot be used as value.", name => $_[0]->token }
+
 =c_method validated $string, $where
 Create a MF::NAME from a $string which needs to be validated for being a valid
 name.  The $where will be used in error messages when the $string is invalid.

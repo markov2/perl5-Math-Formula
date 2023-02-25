@@ -42,4 +42,6 @@ is $context->value('.name'), 'test', 'context attribute';
 is $context->value('#system.name'), 'system', 'system attribute';
 is $context->value("#system.os"), 'linux', 'system formula';
 
+#is $context->value('aap', expect => 'MF::STRING'), 'aap', 'context attribute';
+
 done_testing;

@@ -8,6 +8,8 @@ version 0.11:
 	- module name registrations for PAUSE
 	- handle accidental MF::REGEXP on 'like'
 	- ::Type::new() did not appear in the docs
+	- nested fragments now work
+	- NAMEs cannot be used as value
 
 	Improvements:
 	- warn when trying to convert qr to pattern

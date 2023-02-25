@@ -49,7 +49,7 @@ sub init($)
 	my $name   = $self->{MFC_name}   = $args->{name} or error __x"context without a name";
 
 	$self->{MFC_attrs} = {
-		name       => MF::NAME->new($name),
+		name       => MF::STRING->new($name),
 		mf_version => MF::STRING->new(undef, $Math::Formula::VERSION),
 		version    => $args->{version} ? MF::STRING->new($args->{version}) : undef,
 		created    => $self->_default(created => 'MF::DATETIME', $args->{created}, DateTime->now),
