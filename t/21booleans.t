@@ -4,8 +4,10 @@ use warnings;
 use strict;
 use utf8;
 
-use Math::Formula ();
 use Test::More;
+
+use Math::Formula          ();
+use Math::Formula::Context ();
 
 my $expr = Math::Formula->new(test => 1);
 
@@ -52,5 +54,9 @@ foreach (@infix)
 	$expr->_test($rule);
 	is $expr->evaluate->token, $result, "$rule -> $result";
 }
+
+my $context = Math::Formula::Context->new(name => 'test');
+is $context->run('not true')->token, 'false';
+is $context->run('not false')->token, 'true';
 
 done_testing;

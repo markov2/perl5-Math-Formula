@@ -102,11 +102,11 @@ removed, intermediate sequences of blanks shortened to one blank.
 
 sub collapsed($) { $_[0]->token =~ s/\s+/ /gr =~ s/^ //r =~ s/ $//r }
 
-sub prefix
-{   my ($self, $op, $child) = @_;
+sub prefix()
+{   my ($self, $op, $context) = @_;
 
 	error __x"cannot find prefx operator '{op}' on a ({child})",
-		op => $op, child => $child;
+		op => $op, child => ref $self;
 }
 
 sub attribute {
@@ -159,11 +159,11 @@ package
 use base 'Math::Formula::Type';
 
 sub prefix($)
-{	my ($self, $op) = @_;
+{	my ($self, $op, $context) = @_;
 	if($op eq 'not')
 	{	return MF::BOOLEAN->new(undef, ! $self->value);
 	}
-	$self->SUPER::prefix($op);
+	$self->SUPER::prefix($op, $context);
 }
 
 sub infix($$$)
@@ -361,10 +361,10 @@ sub cast($)
 }
 
 sub prefix($)
-{	my ($self, $op) = @_;
+{	my ($self, $op, $context) = @_;
 	  $op eq '+' ? $self
 	: $op eq '-' ? MF::INTEGER->new(undef, - $self->value)
-	: $self->SUPER::prefix($op)
+	: $self->SUPER::prefix($op, $context);
 }
 
 sub infix($$$)
@@ -460,11 +460,11 @@ sub cast($)
 	: $self->SUPER::cast($to);
 }
 
-sub prefix($)
-{	my ($self, $op) = @_;
+sub prefix($$)
+{	my ($self, $op, $context) = @_;
 	  $op eq '+' ? $self
 	: $op eq '-' ? MF::FLOAT->new(undef, - $self->value)
-	: $self->SUPER::prefix($op)
+	: $self->SUPER::prefix($op, $context)
 }
 
 sub infix($$$)
@@ -948,11 +948,11 @@ sub _value($)
 	$negative ? $duration->multiply(-1) : $duration;
 }
 
-sub prefix($)
-{   my ($self, $op, $right) = @_;
+sub prefix($$)
+{   my ($self, $op, $context) = @_;
 		$op eq '+' ? $self
 	  : $op eq '-' ? MF::DURATION->new('-' . $self->token)
-	  : $self->SUPER::prefix($op)
+	  : $self->SUPER::prefix($op, $context);
 }
 
 sub infix($$@)
@@ -995,7 +995,8 @@ A name which is not right of a C<#> or C<.> can be cast into an object
 from the context.
 
 Names are symbol: are not a value by themselves, so have no values to
-be ordered.
+be ordered.  However, they may exist however: test it with prefix operator
+C<exists>.
 
 =examples of names
 
@@ -1012,6 +1013,12 @@ be ordered.
   .method   # (prefix .) method on default object
   name#frag # fragment of object 'name'
   file.size # method 'size' on object 'file'
+
+Attributes on names
+
+  exists live     -> BOOLEAN    # does formula 'live' exist?
+  not exists live -> BOOLEAN
+
 =cut
 
 package
@@ -1051,6 +1058,15 @@ sub cast(@)
 	$context->evaluate($self->token, expect => $type);
 }
 
+sub prefix($$)
+{	my ($self, $op, $context) = @_;
+
+	return MF::BOOLEAN->new(undef, defined $context->formula($self->token))
+		if $op eq 'exists';
+
+	$self->SUPER::prefix($op, $context);
+}
+
 sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
@@ -1060,6 +1076,7 @@ sub infix(@)
 	{	my $left = $name eq '' ? MF::FRAGMENT->new($context->name, $context) : $context->evaluate($name);
 		return $left->infix(@_) if $left;
 	}
+
 	if($op eq '#')
 	{	my $left = $name eq '' ? MF::FRAGMENT->new($context->name, $context) : $context->fragment($name);
 		return $left->infix(@_) if $left;
@@ -1068,6 +1085,7 @@ sub infix(@)
 	my $left = $context->evaluate($name);
 	$left ? $left->infix($op, $right, $context): undef;
 }
+
 
 #-----------------
 =section MF::PATTERN, pattern matching

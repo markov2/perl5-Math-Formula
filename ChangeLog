@@ -9,6 +9,7 @@ version 0.12:
 
 	Improvements:
 	- attributes of Frasgment (Context) start with 'ctx_'
+	- operator 'exists' on names.
 
 version 0.11: Sat Feb 25 12:41:37 CET 2023
 

@@ -182,8 +182,7 @@ my $match_op    = join '|',
 	qw/=~ !~
 	 <=> <= >= == != < > /,  # order is important
 	( map "$_\\b", qw/
-		and or not xor
-		like unlike
+		and or not xor exists like unlike
 		cmp lt le eq ne ge gt/
 	);
 
@@ -260,7 +259,7 @@ sub _build_ast($$)
 			my $next  = $self->_build_ast($t, $prio)
 				or error __x"expression '{name}', monadic '{op}' not followed by anything useful",
 				    name => $self->name, op => $op;
-#warn "HERE";
+#warn "PREFIX $op";
 
 			$first = MF::PREFIX->new($op, $next);
 			redo PROGRESS;
@@ -393,9 +392,9 @@ helper methods.
 
 =section Operators
 
-As B<prefix> operator, you can use C<not>, C<->, C<+> on applicable data
-types.  The C<#> (fragment) and C<.> (attributes) prefixes are weird cases:
-see M<Math::Formula::Context>.
+As B<prefix> operator, you can use C<not>, C<->, C<+>, and C<exists>
+on applicable data types.  The C<#> (fragment) and C<.> (attributes)
+prefixes are weird cases: see M<Math::Formula::Context>.
 
 Operators work on explicit data types.
 Of course, you can use parenthesis for grouping.

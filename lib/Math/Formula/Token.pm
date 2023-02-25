@@ -38,6 +38,7 @@ package
 	MF::OPERATOR;
 
 use base 'Math::Formula::Token';
+use Log::Report 'math-formula', import => [ 'panic' ];
 
 use constant {
     # Associativity
@@ -48,7 +49,10 @@ use constant {
 # "accidentally" is the same value as the M<token()> method produces.
 sub operator() { $_[0][0] }
 
-sub _compute { die }  # must be extended
+sub _compute
+{	my ($self, $context, $expr) = @_;
+	panic +(ref $self) . ' does not compute';
+}
 
 my %table;
 {
@@ -102,8 +106,7 @@ sub _compute($$)
     my $value = $self->child->_compute($context, $expr)
 		or return undef;
 
-	# no prefix operator needs $context or $expr yet
-	$value->prefix($self->operator);
+	$value->prefix($self->operator, $context);
 }
 
 #-------------------
