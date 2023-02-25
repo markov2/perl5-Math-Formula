@@ -59,7 +59,8 @@ my %table;
 	# Prefix operators and parenthesis are not needed here
     # Keep in sync with the table in Math::Formula
 	my @order = (
-#		[ LTR,     ',' ],   ? :
+#		[ LTR,     ',' ],
+ 		[ LTR,     '?', ':' ],        # ternary ?:
 		[ LTR,     qw/or xor/ ],
 		[ LTR,     'and' ],
 		[ NOCHAIN, qw/ <=> < <= == != >= > / ],
@@ -86,7 +87,7 @@ my %table;
 # LTR (compute left to right), RTL (right to left), or NOCHAIN (non-stackable
 # operator).
 
-sub find($) { @{$table{$_[1]} // die "op $_[1]" } }
+sub find($) { @{$table{$_[1]} // panic "op $_[1]" } }
 
 #-------------------
 # MF::PREFIX, monadic prefix operator
@@ -165,12 +166,28 @@ sub _compute($$)
 	$left->infix($op, $right, $context, $expr);
 }
 
+
 #-------------------
-# MF::FORMULAR, temporary wrapper for a formular
-# When a NAME has been looked-up at the left side of an infix operator, or as
-# child of a prefix operator, it will become this.
+# MF::TERNARY,  if ? then : else
+# Ternary operators have three arguments.  This is a specialization from the
+# MF::OPERATOR type, hence shares its methods.
 
 package
-	MF::Operator;
+	MF::TERNARY;
+
+use base 'MF::OPERATOR';
+
+sub condition() { $_[0][1] }
+sub then()      { $_[0][2] }
+sub else()      { $_[0][3] }
+
+sub _compute($$)
+{	my ($self, $context, $expr) = @_;
+
+    my $cond  = $self->condition->_compute($context, $expr)
+		or return undef;
+
+	($cond->value ? $self->then : $self->else)->_compute($context, $expr)
+}
 
 1;

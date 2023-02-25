@@ -12,6 +12,7 @@ version 0.12:
 	- attributes of Frasgment (Context) start with 'ctx_'
 	- prefix operator 'exists' on names.
 	- attribute 'is_empty' on strings.
+	- implement ? :
 
 version 0.11: Sat Feb 25 12:41:37 CET 2023
 

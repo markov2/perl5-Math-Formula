@@ -77,7 +77,6 @@ now be a smart expression.  Declarative programming.
 =section Plans
 
 =over 4
-=item * the C<?:> (ternary if-then-else)
 =item * parameterized formulas would be nice
 =item * loading and saving contexts in INI, YAML, and JSON format
 =back
@@ -178,9 +177,9 @@ my $match_dt    = MF::DATETIME->_match;
 my $match_dur   = MF::DURATION->_match;
 
 my $match_op    = join '|',
-	'[*\/+\-#~.%]',
+	'[?*\/+\-#~.%]',
 	qw/=~ !~
-	 <=> <= >= == != < > /,  # order is important
+	 <=> <= >= == != < > :(?![0-9][0-9]) (?<![0-9][0-9]): /,  # order is important
 	( map "$_\\b", qw/
 		and or not xor exists like unlike
 		cmp lt le eq ne ge gt/
@@ -231,7 +230,8 @@ sub _build_ast($$)
   PROGRESS:
 	while(my $first = shift @$t)
 	{
-#warn "LOOP FIRST ", Dumper $first,
+#use Data::Dumper; $Data::Dumper::Indent = 0;
+#warn "LOOP FIRST ", Dumper $first;
 #warn "     MORE  ", Dumper $t;
 		if($first->isa('MF::PARENS'))
 		{	my $level = $first->level;
@@ -259,7 +259,6 @@ sub _build_ast($$)
 			my $next  = $self->_build_ast($t, $prio)
 				or error __x"expression '{name}', monadic '{op}' not followed by anything useful",
 				    name => $self->name, op => $op;
-#warn "PREFIX $op";
 
 			$first = MF::PREFIX->new($op, $next);
 			redo PROGRESS;
@@ -282,7 +281,23 @@ sub _build_ast($$)
 			if $next_prio < $prio
 			|| ($next_prio==$prio && $assoc==MF::OPERATOR::LTR);
 
+		if($op eq ':')
+		{	return $first;
+		}
+
 		shift @$t;    # apply the operator
+		if($op eq '?')
+		{	my $then  = $self->_build_ast($t, 0);
+			my $colon = shift @$t;
+			$colon && $colon->token eq ':'
+				or error __x"expression '{name}', expected ':' in '?:', but got '{token}'",
+					name => $self->name, token => ($next ? $colon->token : 'end-of-line');
+
+			my $else = $self->_build_ast($t, $next_prio);
+			$first = MF::TERNARY->new($op, $first, $then, $else);
+			redo PROGRESS;
+		}
+
 		$first = MF::INFIX->new($op, $first, $self->_build_ast($t, $next_prio));
 		redo PROGRESS;
 	}
@@ -402,6 +417,7 @@ Of course, you can use parenthesis for grouping.
 The B<infix> operators have the following priorities: (from low to higher,
 each like with equivalent priority)
 
+  LTR       ?:                             # if ? then : else
   LTR       or   xor
   LTR       and
   NOCHAIN	<    >    <=   ==   !=   <=>   # numeric comparison
