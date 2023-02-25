@@ -14,9 +14,6 @@ my $context = Math::Formula::Context->new(name => 'test');
 
 ### Simplest form
 
-my $obj1 = MF::FRAGMENT->new('tic', $context, {}, {});
-isa_ok $obj1, 'MF::FRAGMENT', 'Create first object';
-
 {	package
 		A;  # help PAUSE
 
@@ -25,12 +22,12 @@ isa_ok $obj1, 'MF::FRAGMENT', 'Create first object';
 }
 
 my $the_real_thing = A->new;
-ok $obj1->addAttribute(tac => sub { $the_real_thing->toe }), 'add attribute';
+ok $context->addFormula(tac => sub { $the_real_thing->toe }), 'add formula';
 
-my $tac = $obj1->attribute('tac');
+my $tac = $context->formula('tac');
 ok defined $tac, '... found attr back';
-isa_ok $tac, 'CODE';
-my $res1 = $tac->();
+isa_ok $tac, 'Math::Formula';
+my $res1 = $tac->evaluate;
 isa_ok $res1, 'MF::INTEGER', '... result';
 is $res1->value, 42, 'Yeh!!';
 
@@ -41,8 +38,8 @@ my $system = Math::Formula::Context->new(name => 'system');
 $system->addFormula(os => '"linux"');
 $context->addFragment($system);
 
-is $context->value('.name'), 'test';
-is $context->value('#system.name'), 'system';
-is $context->run("#system.os"), 'linux';
+is $context->value('.name'), 'test', 'context attribute';
+is $context->value('#system.name'), 'system', 'system attribute';
+is $context->value("#system.os"), 'linux', 'system formula';
 
 done_testing;

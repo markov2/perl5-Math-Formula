@@ -1042,8 +1042,8 @@ sub cast(@)
 {	my ($self, $type, $context) = @_;
 
 	if($type->isa('MF::FRAGMENT'))
-	{	my $frag = $context->fragment($self->token);
-		return $frag if $frag;
+	{	my $frag = $self->token eq '' ? $context : $context->fragment($self->token);
+		return MF::FRAGMENT->new($frag->name, $frag) if $frag;
 	}
 
 	$context->evaluate($self->token, expect => $type);
@@ -1052,9 +1052,19 @@ sub cast(@)
 sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
+	my $name = $self->token;
 
-	my $left = $context->evaluate($self->token);
-	$left ? $left->infix(@_) : undef;
+	if($op eq '.')
+	{	my $left = $name eq '' ? MF::FRAGMENT->new($context->name, $context) : $context->evaluate($name);
+		return $left->infix(@_) if $left;
+	}
+	if($op eq '#')
+	{	my $left = $name eq '' ? MF::FRAGMENT->new($context->name, $context) : $context->fragment($name);
+		return $left->infix(@_) if $left;
+	}
+
+	my $left = $context->evaluate($name);
+	$left ? $left->infix($op, $right, $context): undef;
 }
 
 #-----------------
@@ -1171,42 +1181,28 @@ use base 'Math::Formula::Type';
 
 use Log::Report 'math-formula', import => [ qw/panic error __x/ ];
 
-sub new(@)
-{	my ($class, $name, $context, %args) = @_;
-
-	my $self = $class->SUPER::new($name, $context,
-		$args{attributes} || {},
-	);
-
-	$self;
-}
-
-sub name    { $_[0]->token }
-sub context { $_[0]->value }
+sub name    { $_[0][0] }
+sub context { $_[0][1] }
 
 sub infix($$@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
+	my $name = $right->token;
 
-	if($op eq '#')
-	{	my $r = $right->isa('MF::FRAGMENT') ? $right : $right->cast('MF::FRAGMENT', $context);
-		return $r if $r;
+	if($op eq '#' && $right->isa('MF::NAME'))
+	{	my $fragment = $self->context->fragment($name)
+			or error __x"cannot find fragment '{name}' in '{context}'",
+				name => $name, context => $context->name;
+
+		return $fragment;
+	}
+
+	if($op eq '.' && $right->isa('MF::NAME'))
+	{	my $result = $self->context->evaluate($name);
+		return $result if $result;
 	}
 
 	$self->SUPER::infix(@_);
-}
-
-=method addAttribute $name, $code
-=cut
-
-sub addAttribute($$)
-{	my ($self, $name, $code) = @_;
-	$self->[2]{$name} = $code;
-}
-
-sub attribute($)
-{	my ($self, $name) = @_;
-	$self->[2]{$name} || $self->SUPER::attribute($name);
 }
 
 1;

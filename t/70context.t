@@ -15,13 +15,10 @@ ok defined $context, 'created a context';
 isa_ok $context, 'Math::Formula::Context';
 is $context->name, 'test';
 
-my $config = $context->config;
-ok defined $config, 'collected context config';
-isa_ok $config, 'MF::FRAGMENT', '...';
-my $name_attr = $config->attribute('name');
+my $name_attr = $context->attribute('name');
 ok defined $name_attr, '... has a name';
-isa_ok $name_attr, 'MF::NAME', '...';
-is $name_attr->value, 'test';
+isa_ok $name_attr, 'Math::Formula', '...';
+is $name_attr->evaluate->value, 'test';
 
 ### Create formulas verbose
 

@@ -7,8 +7,6 @@ use strict;
 use Log::Report 'math-formula';
 use Scalar::Util qw/blessed/;
 
-my $config;
-
 =chapter NAME
 
 Math::Formula::Context - calculation context
@@ -50,12 +48,12 @@ sub init($)
 {	my ($self, $args) = @_;
 	my $name   = $self->{MFC_name}   = $args->{name} or error __x"context without a name";
 
-	my $config = $self->{MFC_config} = MF::FRAGMENT->new(config => $self, attributes => {
+	$self->{MFC_attrs} = {
 		name       => MF::NAME->new($name),
 		mf_version => MF::STRING->new(undef, $Math::Formula::VERSION),
 		version    => $args->{version} ? MF::STRING->new($args->{version}) : undef,
 		created    => $self->_default(created => 'MF::DATETIME', $args->{created}, DateTime->now),
-	});
+	};
 
 	if(my $forms = $args->{formula})
 	{	$self->add(ref $forms eq 'ARRAY' ? @$forms : $forms);
@@ -72,16 +70,21 @@ sub init($)
 Contexts are required to have a name.  Usually, this is the name of the fragment as
 well.
 
-=method config
-Returns an MF::FRAGMENT which contains all information other expressions can use about the
-active context (or fragment).
 =cut
 
 sub name   { $_[0]->{MFC_name} }
-sub config { $_[0]->{MFC_config} }
 
 #--------------
-=section Formula and Fragment management
+=section Fragment attributes, Formula and Fragment management
+
+=method attribute $name
+=cut
+
+sub attribute($)
+{	my ($self, $name) = @_;
+	my $def = $self->{MFC_attrs}{$name} or return;
+	Math::Formula->new($name => $def);
+}
 
 =method add LIST
 Add one or more items to the context.
@@ -141,19 +144,23 @@ Add a single formula to this context.  The formula is returned.
   $context->addFormula(wakeup => $form);  # register under a (different) name
   $context->addFormula(wakeup => '07:00:00', returns => 'MF::TIME');
   $context->addFormula(wakeup => [ '07:00:00', returns => 'MF::TIME' ]);
+  $context->addFormula(wakeup => sub { '07:00:00' }, returns => 'MF::TIME' ]);
+  $context->addFormula(wakeup => MF::TIME->new('07:00:00'));
 =cut
 
 sub addFormula(@)
 {	my ($self, $first) = (shift, shift);
+	my $next = $_[0];
 
 	my ($name, $form) =
 	  !@_ && blessed $first && $first->isa('Math::Formula')
 	? ($first->name, $first)
-	: @_==1 && !ref $first && blessed $_[0] && $_[0]->isa('Math::Formula')
-	? ($first, $_[0])
-	: @_==1 && !ref $first && ref $_[0] eq 'ARRAY'
-	? ($first, Math::Formula->new($first, @{$_[0]}))
-	: @_ && !ref $first && !ref $_[0]
+	: @_==1 && !ref $first && blessed $next && $next->isa('Math::Formula')
+	? ($first, $next)
+	: @_==1 && !ref $first && ref $next eq 'ARRAY'
+	? ($first, Math::Formula->new($first, @{$next}))
+	: @_ && !ref $first &&
+		 (!ref $next || ref $next eq 'CODE' || blessed $next && $next->isa('Math::Formula::Type'))
 	? ($first, Math::Formula->new($first, @_))
 	: panic __x"formula declaration '{name}' not understood", name => $first;
 
@@ -192,11 +199,10 @@ when not found.  The %options are passed to M<Math::Formula::evaluate()>.
 sub evaluate($$%)
 {	my ($self, $name) = (shift, shift);
 
-	# Wow, I am impressed!
-	length $name or return $self->config;
+	# Wow, I am impressed!  Caused by prefix(#,.) -> infix
+	length $name or return $self;
 
-	# silently ignore missing tags
-	my $form = $self->formula($name);
+	my $form = $self->attribute($name) || $self->formula($name);
 	unless($form)
 	{	warning __x"no formula '{name}' in {context}", name => $name, context => $self->name;
 		return undef;
@@ -204,7 +210,8 @@ sub evaluate($$%)
 
 	my $claims = $self->{MFC_claims};
 	! $claims->{$name}++
-		or error __x"recursion in expression '{name}' at {context}", name => $name, context => $self->name;
+		or error __x"recursion in expression '{name}' at {context}",
+			name => $name, context => $self->name;
 
 	my $result = $form->evaluate($self, @_);
 
@@ -278,9 +285,10 @@ are not too complex:
   my $filename  = '...';
   my $fragment = Math::Formula::Context->new(name => 'file',
     attributes => {
-      name     => $filename
+      name     => sub { MF::STRING->new($filename) },
       size     => sub { MF::INTEGER->new(-s $filename) },
       is_image => 'name =~ "*.{jpg,png,gif}"',
+	  π        => MF::FLOAT->new(undef, 3.14),    # constant
     });
   $context->addAttribute(allocate => '#file.size * 10k');
   print $context->value('#file.allocate');
