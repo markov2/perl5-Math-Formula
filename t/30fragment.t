@@ -38,8 +38,10 @@ my $system = Math::Formula::Context->new(name => 'system');
 $system->addFormula(os => '"linux"');
 $context->addFragment($system);
 
-is $context->value('.name'), 'test', 'context attribute';
-is $context->value('#system.name'), 'system', 'system attribute';
+is $context->value('.ctx_name'), 'test', 'context attribute';
+is $context->value('ctx_name'), 'test';
+
+is $context->value('#system.ctx_name'), 'system', 'system attribute';
 is $context->value("#system.os"), 'linux', 'system formula';
 
 ok $context->addFormula(system2 => '#system'), 'shortcut for fragment';

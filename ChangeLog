@@ -7,6 +7,9 @@ version 0.12:
 	Fixes:
 	- require 5.16 for fc()
 
+	Improvements:
+	- attributes of Frasgment (Context) start with 'ctx_'
+
 version 0.11: Sat Feb 25 12:41:37 CET 2023
 
 	Fixes:

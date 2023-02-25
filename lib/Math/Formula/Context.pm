@@ -49,10 +49,11 @@ sub init($)
 	my $name   = $self->{MFC_name}   = $args->{name} or error __x"context without a name";
 
 	$self->{MFC_attrs} = {
-		name       => MF::STRING->new($name),
-		mf_version => MF::STRING->new(undef, $Math::Formula::VERSION),
-		version    => $args->{version} ? MF::STRING->new($args->{version}) : undef,
-		created    => $self->_default(created => 'MF::DATETIME', $args->{created}, DateTime->now),
+		ctx_name       => MF::STRING->new($name),
+		ctx_version    => $args->{version}    ? MF::STRING->new($args->{version}) : undef,
+		ctx_created    => $self->_default(created => 'MF::DATETIME', $args->{created}, DateTime->now),
+		ctx_updated    => $args->{updated} ? MF::DATETIME->new(updated => $args->{updated}) : undef,
+		ctx_mf_version => MF::STRING->new(undef, $args->{mf_version} // $Math::Formula::VERSION),
 	};
 
 	if(my $forms = $args->{formula})
@@ -75,7 +76,20 @@ well.
 sub name   { $_[0]->{MFC_name} }
 
 #--------------
-=section Fragment attributes, Formula and Fragment management
+=section Fragment (this context) attributes
+
+Basic data types usually have attributes (string C<length>), which operator on the type
+to produce some fact.  The fragment type (which manages Context objects), however,
+cannot distinguish between attributes and formula names: both use the dot (C<.>)
+operator.  Therefore, all context attributes will start with C<ctx_>.
+
+The following attributes are currently defined:
+
+  ctx_name        MF::STRING    same as $context->name
+  ctx_version     MF::STRING    optional version of the context data
+  ctx_created     MF::DATETIME  initial creation of this context data
+  ctx_updated     MF::DATETIME  last save of this context data
+  ctx_mf_version  MF::STRING    Math::Formula version, useful for read/save
 
 =method attribute $name
 =cut
@@ -85,6 +99,9 @@ sub attribute($)
 	my $def = $self->{MFC_attrs}{$name} or return;
 	Math::Formula->new($name => $def);
 }
+
+#--------------
+=section Formula and Fragment management
 
 =method add LIST
 Add one or more items to the context.
@@ -202,7 +219,7 @@ sub evaluate($$%)
 	# Wow, I am impressed!  Caused by prefix(#,.) -> infix
 	length $name or return $self;
 
-	my $form = $self->attribute($name) || $self->formula($name);
+	my $form = $name =~ /^ctx_/ ? $self->attribute($name) : $self->formula($name);
 	unless($form)
 	{	warning __x"no formula '{name}' in {context}", name => $name, context => $self->name;
 		return undef;

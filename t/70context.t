@@ -15,7 +15,7 @@ ok defined $context, 'created a context';
 isa_ok $context, 'Math::Formula::Context';
 is $context->name, 'test';
 
-my $name_attr = $context->attribute('name');
+my $name_attr = $context->attribute('ctx_name');
 ok defined $name_attr, '... has a name';
 isa_ok $name_attr, 'Math::Formula', '...';
 is $name_attr->evaluate->value, 'test';
