@@ -61,7 +61,7 @@ my %table;
 	my @order = (
 #		[ LTR,     ',' ],
  		[ LTR,     '?', ':' ],        # ternary ?:
-		[ LTR,     qw/or xor/ ],
+		[ LTR,     qw/or xor/, '//' ],
 		[ LTR,     'and' ],
 		[ NOCHAIN, qw/ <=> < <= == != >= > / ],
 		[ NOCHAIN, qw/ cmp lt le eq ne ge gt/ ],

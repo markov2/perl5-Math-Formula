@@ -177,9 +177,9 @@ my $match_dt    = MF::DATETIME->_match;
 my $match_dur   = MF::DURATION->_match;
 
 my $match_op    = join '|',
-	'[?*\/+\-#~.%]',
-	qw/=~ !~
-	 <=> <= >= == != < > :(?![0-9][0-9]) (?<![0-9][0-9]): /,  # order is important
+	qw{ // }, '[?*\/+\-#~.%]',
+	qw{ =~ !~ <=> <= >= == != < > },  # order is important
+	qw{ :(?![0-9][0-9]) (?<![0-9][0-9]): },
 	( map "$_\\b", qw/
 		and or not xor exists like unlike
 		cmp lt le eq ne ge gt/
@@ -418,7 +418,7 @@ The B<infix> operators have the following priorities: (from low to higher,
 each like with equivalent priority)
 
   LTR       ?:                             # if ? then : else
-  LTR       or   xor
+  LTR       or   xor  //
   LTR       and
   NOCHAIN	<    >    <=   ==   !=   <=>   # numeric comparison
   NOCHAIN	lt   gt   le   eq   ne   cmp   # string comparison

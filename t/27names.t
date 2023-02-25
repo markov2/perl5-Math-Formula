@@ -27,4 +27,7 @@ is $context->run('not exists live')->token, 'false';
 is $context->run('exists green_man')->token, 'false', '... green man';
 is $context->run('not exists green_man')->token, 'true';
 
+is $context->run('live // green_man')->value, 42, 'default, not needed';
+is $context->run('green_man // live')->value, 42, '... needed';
+is $context->run('green_man // missing // no_not_here // 13')->value, 13, '... into constant';
 done_testing;

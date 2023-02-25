@@ -1000,6 +1000,10 @@ Names are symbol: are not a value by themselves, so have no values to
 be ordered.  However, they may exist however: test it with prefix operator
 C<exists>.
 
+The more complicated concept is the C<//> operator.  When there is no
+formula with the name on the left side, the right side is taken.  This
+is often stacked with a constant default value at the end.
+
 =examples of names
 
   tic
@@ -1020,6 +1024,8 @@ Attributes on names
 
   exists live     -> BOOLEAN    # does formula 'live' exist?
   not exists live -> BOOLEAN
+
+  live // dead // false         # pick first rule which exists
 
 =cut
 
@@ -1082,6 +1088,12 @@ sub infix(@)
 	if($op eq '#')
 	{	my $left = $name eq '' ? MF::FRAGMENT->new($context->name, $context) : $context->fragment($name);
 		return $left->infix(@_) if $left;
+	}
+
+	if($op eq '//')
+	{	return defined $context->formula($name)
+		  ? $context->evaluate($name)
+		  : $right->_compute($context);
 	}
 
 	my $left = $context->evaluate($name);
