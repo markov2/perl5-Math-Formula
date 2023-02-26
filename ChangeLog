@@ -2,7 +2,7 @@
 
 All changes made by Mark Overmeer, unless explicitly stated otherwise.
 
-version 0.12:
+version 0.12: Sun 26 Feb 10:10:29 CET 2023
 
 	Fixes:
 	- require 5.16 for fc().
