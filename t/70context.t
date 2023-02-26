@@ -87,7 +87,7 @@ my %rules = (
 );
 
 my $c3 = Math::Formula::Context->new(name => 'test',
-	formula => [ $awake, \%rules ],
+	formulas => [ $awake, \%rules ],
 );
 
 ok $c3->formula('wakeup' )->name, 'wakeup';
