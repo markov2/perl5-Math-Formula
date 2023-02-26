@@ -6,6 +6,11 @@ lib/Math/Formula.pm
 lib/Math/Formula/Context.pm
 lib/Math/Formula/Token.pm
 lib/Math/Formula/Type.pm
+lib/Math/Formula/Config.pm
+lib/Math/Formula/Context.pm
+lib/Math/Formula/Config/INI.pm
+lib/Math/Formula/Config/JSON.pm
+lib/Math/Formula/Config/YAML.pm
 01use.t
 10formula.t
 20integers.t
@@ -27,3 +32,6 @@ lib/Math/Formula/Type.pm
 62attributes.t
 63code.t
 70context.t
+80json.t
+81yaml.t
+82ini.t

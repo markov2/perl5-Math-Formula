@@ -180,9 +180,7 @@ my $match_op    = join '|',
 	qw{ // }, '[?*\/+\-#~.%]',
 	qw{ =~ !~ <=> <= >= == != < > },  # order is important
 	qw{ :(?![0-9][0-9]) (?<![0-9][0-9]): },
-	( map "$_\\b", qw/
-		and or not xor exists like unlike
-		cmp lt le eq ne ge gt/
+	( map "$_\\b", qw/ and or not xor exists like unlike cmp lt le eq ne ge gt/
 	);
 
 sub _tokenize($)

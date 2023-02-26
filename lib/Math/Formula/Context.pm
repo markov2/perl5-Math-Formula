@@ -56,12 +56,23 @@ sub init($)
 		ctx_mf_version => MF::STRING->new(undef, $args->{mf_version} // $Math::Formula::VERSION),
 	};
 
-	if(my $forms = $args->{formula})
+	if(my $forms = $args->{formulas})
 	{	$self->add(ref $forms eq 'ARRAY' ? @$forms : $forms);
 	}
 
 	$self->{MFC_claims} = { };
+	$self->{MFC_forms}  = { };
+	$self->{MFC_frags}  = { };
 	$self;
+}
+
+# For save()
+sub _index()
+{	my $self = shift;
+	 +{	attributes => $self->{MFC_attrs},
+		formulas   => $self->{MFC_forms},
+		fragments  => $self->{MFC_frags},
+	  };
 }
 
 #--------------

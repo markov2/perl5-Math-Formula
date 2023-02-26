@@ -17,7 +17,7 @@ is_deeply $expr->_tokenize('Зеленський'), [ MF::NAME->new('Зелен�
 is_deeply $expr->_tokenize('tic tac toe'), [MF::NAME->new('tic'), MF::NAME->new('tac'), MF::NAME->new('toe')];
 
 my $context = Math::Formula::Context->new(name => 'test',
-	formula => { live => '42' },
+	formulas => { live => '42' },
 );
 ok defined $context, 'Testing existence';
 
@@ -30,4 +30,5 @@ is $context->run('not exists green_man')->token, 'true';
 is $context->run('live // green_man')->value, 42, 'default, not needed';
 is $context->run('green_man // live')->value, 42, '... needed';
 is $context->run('green_man // missing // no_not_here // 13')->value, 13, '... into constant';
+
 done_testing;

@@ -15,6 +15,7 @@ version 0.12:
 	- attribute 'is_empty' on strings.
 	- implement ? :
 	- implemented // for names
+	- implemented config save
 
 version 0.11: Sat Feb 25 12:41:37 CET 2023
 
