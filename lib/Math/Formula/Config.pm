@@ -71,4 +71,14 @@ sub path_for($$)
 	File::Spec->catfile($self->directory, $file);
 }
 
+#----------------------
+=section Actions
+
+=method save $context, %args
+Serialize the $context to a files as storage or to be editted by hand.
+This is a usefull method when default configuration templates need to
+be generated.
+=cut
+
+
 1;

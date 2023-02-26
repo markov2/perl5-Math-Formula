@@ -11,7 +11,7 @@ WriteMakefile
     , 'Log::Report'  => 0,
 	, 'POSIX'        => 0,
 	, 'Scalar::Util' => 0,
-	' 'File::Spec'   => 0
+	, 'File::Spec'   => 0,
 
 	, 'DateTime'           => 0,
 	, 'DateTime::Duration' => 0,

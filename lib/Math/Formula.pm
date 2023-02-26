@@ -119,7 +119,8 @@ sub new(%)
 {	my ($class, $name, $expr, %self) = @_;
 	$self{_name} = $name;
 	$self{_expr} = $expr;
-	(bless {}, $class)->init(\%self) }
+	(bless {}, $class)->init(\%self);
+}
 
 sub init($)
 {	my ($self, $args) = @_;

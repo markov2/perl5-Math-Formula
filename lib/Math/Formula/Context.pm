@@ -40,20 +40,24 @@ sub _default($$$$)
 	my $form
 	  = ! $value         ? $type->new(undef, $default)
 	  : ! blessed $value ? ($value ? Math::Formula->new($name, $value) : undef)
-	  : $value->isa('Math::Formula') ? $value
+	  : $value->isa('Math::Formula')       ? $value
+	  : $value->isa('Math::Formula::Type') ? $value
 	  : error __x"unexpected value for '{name}' in #{context}", name => $name, context => $self->name;
 }
 
 sub init($)
 {	my ($self, $args) = @_;
-	my $name   = $self->{MFC_name}   = $args->{name} or error __x"context without a name";
+	my $name   = $args->{name} or error __x"context requires a name";
+	my $node   = blessed $name ? $name : MF::STRING->new(undef, $name);
+	$self->{MFC_name}   = $node->value;
 
+	my $now;
 	$self->{MFC_attrs} = {
-		ctx_name       => MF::STRING->new($name),
-		ctx_version    => $args->{version}    ? MF::STRING->new($args->{version}) : undef,
-		ctx_created    => $self->_default(created => 'MF::DATETIME', $args->{created}, DateTime->now),
-		ctx_updated    => $args->{updated} ? MF::DATETIME->new(updated => $args->{updated}) : undef,
-		ctx_mf_version => MF::STRING->new(undef, $args->{mf_version} // $Math::Formula::VERSION),
+		ctx_name       => $node,
+		ctx_version    => $self->_default(version => 'MF::STRING',   $args->{version}, "1.00"),
+		ctx_created    => $self->_default(created => 'MF::DATETIME', $args->{created}, $now = DateTime->now),
+		ctx_updated    => $self->_default(updated => 'MF::DATETIME', $args->{updated}, $now //= DateTime->now),
+		ctx_mf_version => $self->_default(mf_version => 'MF::STRING', $args->{mf_version}, $Math::Formula::VERSION),
 	};
 
 	$self->{MFC_forms}  = { };
