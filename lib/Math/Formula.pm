@@ -132,9 +132,19 @@ sub new(%)
 
 sub init($)
 {	my ($self, $args) = @_;
-	$self->{MSBE_name}    = $args->{_name} or panic "every formular requires a name";
-	$self->{MSBE_expr}    = $args->{_expr} or panic "every formular requires an expression";
-	$self->{MSBE_returns} = $args->{returns};
+	my $name = $self->{MSBE_name} = $args->{_name} or panic "every formular requires a name";
+
+	my $expr    = $args->{_expr} or panic "every formular requires an expression";
+	my $returns = $self->{MSBE_returns} = $args->{returns};
+
+	if(ref $expr eq 'SCALAR')
+	{	$expr = MF::STRING->new(undef, $$expr);
+	}
+	elsif(! ref $expr && $returns && $returns->isa('MF::STRING'))
+	{	$expr = MF::STRING->new(undef, $expr);
+	}
+
+	$self->{MSBE_expr} = $expr;
 	$self;
 }
 

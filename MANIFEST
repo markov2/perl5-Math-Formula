@@ -32,6 +32,7 @@ t/61comparison.t
 t/62attributes.t
 t/63code.t
 t/70context.t
+t/71lead.t
 t/80json.t
 t/81yaml.t
 t/82ini.t

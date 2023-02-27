@@ -81,6 +81,7 @@ ok $c2->formula('renamed')->name, 'awake';
 ### Even nicer
 
 my %rules = (
+	person  => \'Larry',
 	wakeup  => '07:00:00',
 	gosleep => [ '23:30:00', returns => 'MF::TIME' ],
 	renamed => $awake,
@@ -114,5 +115,20 @@ is $run2->token, 'PT16H30M0S';
 ok 1, 'test context in infix op';
 $c3->add(asleep => 'PT24H + -awake');
 is $c3->formula('asleep')->name, 'asleep', 'test context in prefix op';
+
+# Got a string?
+
+my $s4 = $c3->formula('person');
+ok defined $s4, 'Got the string';
+is $s4->name, 'person';
+
+my $e4 = $s4->expression;
+isa_ok $e4, 'MF::STRING';
+
+my $n4 = $s4->evaluate;
+isa_ok $n4, 'MF::STRING';
+
+is $n4->token, '"Larry"';
+is $n4->value, 'Larry';
 
 done_testing;

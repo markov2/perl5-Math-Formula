@@ -32,8 +32,8 @@ Many of the %options make sense when this context is reloaded for file.
 =default formula C< [] >
 One or more formula, passed to M<add()>.
 
-=option  lead_expression ''|STRING
-=default lead_expression ''
+=option  lead_expressions ''|STRING
+=default lead_expressions ''
 Read section M</"Keep strings apart from expressions"> below.  When a blank string,
 you will need to put (single or double) quotes around your strings within your strings,
 or pass a SCALAR reference.  But that may be changed.
@@ -67,7 +67,7 @@ sub init($)
 		ctx_mf_version => $self->_default(mf_version => 'MF::STRING', $args->{mf_version}, $Math::Formula::VERSION),
 	};
 
-	$self->{MFC_lead}   = $args->{lead_expression} // '';
+	$self->{MFC_lead}   = $args->{lead_expressions} // '';
 	$self->{MFC_forms}  = { };
 	$self->{MFC_frags}  = { };
 	if(my $forms = $args->{formulas})
@@ -94,11 +94,11 @@ sub _index()
 Contexts are required to have a name.  Usually, this is the name of the fragment as
 well.
 
-=method lead_expression
+=method lead_expressions
 =cut
 
 sub name            { $_[0]->{MFC_name} }
-sub lead_expression { $_[0]->{MFC_lead} }
+sub lead_expressions { $_[0]->{MFC_lead} }
 
 #--------------
 =section Fragment (this context) attributes
@@ -191,8 +191,8 @@ inconveniently, those are popular choices.
 
   $context->addFormula($form);            # already created somewhere else
   $context->addFormula(wakeup => $form);  # register under a (different) name
-  $context->addFormula(wakeup => '07:00:00');      # influenced by lead_expression
-  $context->addFormula(wakeup => [ '07:00:00' ]);  # influenced by lead_expression
+  $context->addFormula(wakeup => '07:00:00');      # influenced by lead_expressions
+  $context->addFormula(wakeup => [ '07:00:00' ]);  # influenced by lead_expressions
   $context->addFormula(wakeup => '07:00:00', returns => 'MF::TIME');
   $context->addFormula(wakeup => [ '07:00:00', returns => 'MF::TIME' ]);
   $context->addFormula(wakeup => sub { '07:00:00' }, returns => 'MF::TIME' ]);
@@ -225,8 +225,8 @@ sub addFormula(@)
 			return $forms->{$name} = Math::Formula->new($name, $typed, %attrs);
 		}
 
-		if(length(my $leader = $self->lead_expression))
-		{	my $typed  = $data =~ s/^\Q$leader// ?  MF::STRING->new(undef, $data) : $data;
+		if(length(my $leader = $self->lead_expressions))
+		{	my $typed  = $data =~ s/^\Q$leader// ? $data : \$data;
 			return $forms->{$name} = Math::Formula->new($name, $typed, %attrs);
 		}
 
@@ -330,9 +330,9 @@ One serious complication in combining various kinds of data in strings, is
 expressing the distinction between strings and the other things.  Strings
 can contain any kind of text, and hence may look totally equivalent
 to the other things.  Therefore, you will need some kind of encoding,
-which can be selected with M<new(lead_expression)> or M<add(lead_expression)>.
+which can be selected with M<new(lead_expressions)> or M<add(lead_expressions)>.
 
-When C<lead_expression> is the empty string (default), then expressions have no
+When C<lead_expressions> is the empty string (default), then expressions have no
 leading flag, so the following can be used:
 
    text_field => \"string"
@@ -342,7 +342,7 @@ leading flag, so the following can be used:
    text_field => "'string'"
    expr_field => '1 + 2 * 3'
 
-But C<lead_expression> can be anything.  For instance, easy to remember is C<=>. In
+But C<lead_expressions> can be anything.  For instance, easy to remember is C<=>. In
 that case, the added data can look like
 
    text_field => \"string"

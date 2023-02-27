@@ -12,7 +12,10 @@ my $dir;
 
 BEGIN {
 	eval "require Config::INI::Writer";
-	$@ and plan skip_all => 'Config::INI package not installed';
+	$@ and plan skip_all => 'Config::INI::Writer package not installed';
+
+	eval "require Config::INI::Reader";
+	$@ and plan skip_all => 'Config::INI::Reader package not installed';
 
 	$dir = 'save.ini';
 	-d $dir or mkdir $dir
