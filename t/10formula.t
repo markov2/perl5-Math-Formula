@@ -73,7 +73,7 @@ my @unblessed = (
 	[ '2023-02-25+0100' => 'MF::DATE'    => '2023-02-25+0100' ],
 	[ $duration      => 'MF::DURATION'   => $duration ],
 	[ '"tic"'        => 'MF::STRING'  => '"tic"' ],
-	[ '"tac"'        => 'MF::STRING'  => 'tac'   ],
+	[ '"tac"'        => 'MF::STRING'  => \'tac'   ],
 	[ "'toe'"        => 'MF::STRING'  => "'toe'" ],
 );
 
@@ -87,5 +87,8 @@ foreach (@blessed, @unblessed)
 
 	is $result->token, $token;
 }
+
+is $expr1->toType('"qu\"te"')->value, 'qu"te', 'Difficult quotes';
+is $expr1->toType('"qu\'te"')->value, "qu'te";
 
 done_testing;

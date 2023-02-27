@@ -388,6 +388,7 @@ can be returned.  These are the types with examples for tokens and values:
 
   MF::BOOLEAN   'true'            1        # anything !=0 is true
   MF::STRING    '"tic"'           'tic'    # the token has quotes!
+  MF::STRING    \'tic' \$string   'tic'    # no quotes with SCALAR ref
   MF::INTEGER   '42'              42
   MF::FLOAT     '3.14'            3.14
   MF::DATETIME  '2023-...T09:...' DateTime-object

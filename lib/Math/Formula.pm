@@ -368,7 +368,8 @@ sub toType($)
 	my $match = sub { my $type = shift; my $match = $type->_match; qr/^$match$/ };
 
 	return 
-	    $data =~ /^[+-]?[0-9]+$/         ? MF::INTEGER->new(undef, $data)
+		ref $data eq 'SCALAR'            ? MF::STRING->new($data)
+	  : $data =~ /^[+-]?[0-9]+$/         ? MF::INTEGER->new(undef, $data)
 	  : $data =~ /^[+-]?[0-9]+\./        ? MF::FLOAT->new(undef, $data)
 	  : $data =~ /^(?:true|false)$/      ? MF::BOOLEAN->new($data)
 	  : ref $data eq 'Regexp'            ? MF::REGEXP->new(undef, $data)
@@ -377,7 +378,7 @@ sub toType($)
 	  : $data =~ $_match{'MF::DATE'}     ? MF::DATE->new($data)
 	  : $data =~ $_match{'MF::DURATION'} ? MF::DURATION->new($data)
 	  : $data =~ /^(['"]).*\1$/          ? MF::STRING->new($data)
-	  :                                    MF::STRING->new(undef, $data);
+	  : error __x"not an expression (string needs \\ ) for '{data}'", data => $data;
 }
 
 #--------------------------

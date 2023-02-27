@@ -35,12 +35,12 @@ is $r2->regexp, '(?^ux:ab*c)';
 
 ### PATTERN
 
-my $node3 = MF::STRING->new(undef, "ab*c");
-my $r3 = $node3->cast('MF::PATTERN');
-isa_ok $r3, 'MF::PATTERN', 'cast pattern';
-is $r3->token, '"ab*c"';
-is ref $r3->regexp, 'Regexp';
-is $r3->regexp .'', '(?^u:^ab.*c$)';
+my $node5 = MF::STRING->new(undef, "ab*c");
+my $r5 = $node5->cast('MF::PATTERN');
+isa_ok $r5, 'MF::PATTERN', 'cast pattern';
+is $r5->token, '"ab*c"';
+is ref $r5->regexp, 'Regexp';
+is $r5->regexp .'', '(?^u:^ab.*c$)';
 
 ### PREFIX
 
