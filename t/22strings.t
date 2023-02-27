@@ -16,10 +16,18 @@ is_deeply $expr->_tokenize("'c\\'d'")->[0]->value, "c'd";
 my $node1 = MF::STRING->new(" \tx\r\n \ny zw\t\t\na\n \n" );
 is $node1->collapsed, 'x y zw a', '... collapsed string';
 
+my $node2 = MF::STRING->new(\"Larry");
+is $node2->value, 'Larry', 'created Larry';
+is $node2->token, '"Larry"';
+
+my $node3 = MF::STRING->new(\'Larry');
+is $node3->value, 'Larry', 'created Larry';
+is $node3->token, '"Larry"';
+
 ### REGEXP
 
-my $node2 = MF::STRING->new(undef, "ab*c");
-my $r2 = $node2->cast('MF::REGEXP');
+my $node4 = MF::STRING->new(undef, "ab*c");
+my $r2 = $node4->cast('MF::REGEXP');
 isa_ok $r2, 'MF::REGEXP', 'cast regexp';
 is $r2->token, '"ab*c"';
 is ref $r2->regexp, 'Regexp';

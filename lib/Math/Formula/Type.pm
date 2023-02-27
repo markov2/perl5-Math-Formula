@@ -211,10 +211,27 @@ C<ne>, C<ge>, C<gt>, and C<cmp>.  Read its section in M<Math::Formula>.
 These comparisons use L<Unicode::Collate> in an attempt to get correct
 utf8 sorting.
 
+B<Warning!> When you create an expression which is only one string, then you
+will probably forget the double quotes:
+
+  Math::Formula->new(origin => 'Larry');      # wrong!!!
+  Math::Formula->new(origin => '"Larry"');    # right
+  Math::Formula->new(origin => "'Larry'");    # right
+  Math::Formula->new(origin => $string);      # probably wrong
+  Math::Formula->new(origin => "'$string'");  # probably wrong: can ' be in string?
+
+  Math::Formula->new(origin => \"Larry");     # right
+  Math::Formula->new(origin => \'Larry');     # right
+  Math::Formula->new(origin => \$string);     # right
+
+See also M<Math::Formula::Context::new(is_expression)>.
+
 =examples of strings
 
   "double quoted string"
   'single quoted string'   # alternative
+
+String operations:
 
   "a" + 'b'           -> STRING  "ab"
   "a" =~ "regexp"     -> BOOLEAN, see MF::REGEXP
@@ -238,10 +255,16 @@ use base 'Math::Formula::Type';
 use Unicode::Collate ();
 my $collate = Unicode::Collate->new;  #XXX which options do we need?
 
+sub new($$@)
+{   my ($class, $token, $value) = (shift, shift, shift);
+    ($token, $value) = (undef, $$token) if ref $token eq 'SCALAR';
+    $class->SUPER::new($token, $value, @_);
+}
+
 sub _token($) { '"' . ($_[1] =~ s/[\"]/\\$1/gr) . '"' }
 
 sub _value($)
-{	my $token = $_[1];
+{	my $token = $_[1] // '';
 
 	  substr($token, 0, 1) eq '"' ? $token =~ s/^"//r =~ s/"$//r =~ s/\\([\\"])/$1/gr
 	: substr($token, 0, 1) eq "'" ? $token =~ s/^'//r =~ s/'$//r =~ s/\\([\\'])/$1/gr

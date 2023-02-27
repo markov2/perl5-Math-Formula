@@ -22,6 +22,7 @@ Math::Formula - expressions on steroids
 =chapter SYNOPSIS
 
   my $formula = Math::Formula->new('size', '42k + 324', %options);
+  my $formula = Math::Formula->new(π => 3.14);
   my $size    = $formula->evaluate;
 
   my $context = Math::Formula::Context->new(name => 'example');
@@ -29,7 +30,6 @@ Math::Formula - expressions on steroids
   my $total   = $context->value(total);
 
   my $formula = Math::Formula->new(size => \&own_sub, %options);
-  my $formual = Math::Formula->new(π => MF::FLOAT->new(undef, 3.14))
 
 =chapter DESCRIPTION
 
@@ -47,7 +47,7 @@ For instance, where are many types which you can use in your configuration
 lines to calculate directly (examples far down on this page)
 
   true and false               # real booleans
-  "abc"  'abc'                 # the usual strings
+  "abc"  'abc'                 # the usual strings, WARNING: read below
   7  89k  5Mibi                # integers with multiplier support
   =~ "c$"                      # regular expressions
   like "*c"                    # pattern matching
@@ -59,6 +59,14 @@ lines to calculate directly (examples far down on this page)
   #unit.owner                  # fragments (context, namespaces)
   file.size                    # attributes
   (1 + 2) * 3                  # parenthesis
+
+In your code, all these above are place between quotes.  This makes it
+inconvenient to use strings.  When you use a M<Math::Formula::Context>,
+you can select your own solution via M<Math::Formula::Context::new(is_expression)>.
+With plain formulas, there are only two options:
+
+  "\"string\""   '"string"'   "'$string'"   # $string with escaped quotes!
+  \"string"       \'string'   \$string      # use a SCALAR reference
 
 With this, your expressions can look like this:
 
