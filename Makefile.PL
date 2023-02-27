@@ -17,7 +17,7 @@ WriteMakefile
 	, 'DateTime::Duration' => 0,
 	, 'DateTime::TimeZone' => 0,
 	, 'DateTime::TimeZone::OffsetOnly' => 0,
-    , 'DateTime::Format::Duration::ISO8601' => 0,
+    , 'DateTime::Format::Duration::ISO8601' => 0.006,
     }
   , AUTHOR       => 'Mark Overmeer <markov@cpan.org>'
   , ABSTRACT     => 'Expressions on steroids'
