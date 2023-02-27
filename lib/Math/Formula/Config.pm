@@ -80,5 +80,16 @@ This is a usefull method when default configuration templates need to
 be generated.
 =cut
 
+sub save($%) { die "Save under construction" }
+
+=method load $name, %options
+Load a M<Math::Formula::Context> for an ini file.
+
+=option  filename FILENAME
+=default filename <directory/$name.ini>
+
+=cut
+
+sub load($%) { die "Load under construction" }
 
 1;

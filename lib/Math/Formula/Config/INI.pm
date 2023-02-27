@@ -29,7 +29,8 @@ is not too complex.
 =section Constructors
 =cut
 
-#------------------
+#----------------------
+=section Actions
 
 =method save $context, %args
 Serialize the $context to INI files, as storage or to be editted by hand.

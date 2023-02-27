@@ -23,7 +23,8 @@ Math::Formula::Config::JSON - load/save formulas to file
 =section Constructors
 =cut
 
-#------------------
+#----------------------
+=section Actions
 
 =method save $context, %args
 Serialize the $context to JSON files, as storage or to be editted by hand.

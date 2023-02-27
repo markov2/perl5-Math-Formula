@@ -224,7 +224,7 @@ will probably forget the double quotes:
   Math::Formula->new(origin => \'Larry');     # right
   Math::Formula->new(origin => \$string);     # right
 
-See also M<Math::Formula::Context::new(is_expression)>.
+See also M<Math::Formula::Context::new(lead_expressions)>, for a different solution.
 
 =examples of strings
 

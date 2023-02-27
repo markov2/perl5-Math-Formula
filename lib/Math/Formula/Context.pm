@@ -34,7 +34,7 @@ One or more formula, passed to M<add()>.
 
 =option  lead_expressions ''|STRING
 =default lead_expressions ''
-Read section M</"Keep strings apart from expressions"> below.  When a blank string,
+Read section L</"Keep strings apart from expressions"> below.  When a blank string,
 you will need to put (single or double) quotes around your strings within your strings,
 or pass a SCALAR reference.  But that may be changed.
 
@@ -185,7 +185,7 @@ Add a single formula to this context.  The formula is returned.
 
 =examples
 
-Only the 3rd and 4th line of the examples below are affected by C<new(lead_expresssion)>:
+Only the 3rd and 4th line of the examples below are affected by C<new(lead_expresssions)>:
 only in those cases it is unclear whether we speak about a STRING or an expression.  But,
 inconveniently, those are popular choices.
 
@@ -330,7 +330,7 @@ One serious complication in combining various kinds of data in strings, is
 expressing the distinction between strings and the other things.  Strings
 can contain any kind of text, and hence may look totally equivalent
 to the other things.  Therefore, you will need some kind of encoding,
-which can be selected with M<new(lead_expressions)> or M<add(lead_expressions)>.
+which can be selected with M<new(lead_expressions)>.
 
 When C<lead_expressions> is the empty string (default), then expressions have no
 leading flag, so the following can be used:
@@ -356,6 +356,9 @@ that case, the added data can look like
 Of course, this introduces the security risk in the C<$string> case, which might
 carry a C<=> by accident.  So: although useable, refrain from using that form
 unless you are really, really sure this can never be confused.
+
+Other suggestions for C<lead_expressions> are C<+> or C<expr: >.  Any constant string
+will do.
 
 =section Creating an interface to an object (fragment)
 

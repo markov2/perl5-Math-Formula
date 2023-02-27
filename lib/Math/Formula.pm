@@ -62,7 +62,7 @@ lines to calculate directly (examples far down on this page)
 
 In your code, all these above are place between quotes.  This makes it
 inconvenient to use strings.  When you use a M<Math::Formula::Context>,
-you can select your own solution via M<Math::Formula::Context::new(is_expression)>.
+you can select your own solution via M<Math::Formula::Context::new(lead_expressions)>.
 With plain formulas, there are only two options:
 
   "\"string\""   '"string"'   "'$string'"   # $string with escaped quotes!

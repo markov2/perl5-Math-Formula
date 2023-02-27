@@ -2,7 +2,9 @@
 
 All changes made by Mark Overmeer, unless explicitly stated otherwise.
 
-version 0.13:
+version 0.14:
+
+version 0.13: Mon 27 Feb 13:32:48 CET 2023
 
 	Fixes:
 	- require 5.16 for fc().
@@ -10,7 +12,7 @@ version 0.13:
 
 	Improvements:
 	- implement config INI save and load
-	- booleans created from condition
+	- booleans created from Perl condition undef or ''
 	- implement MF::STRING with reference
 	- implement ::Context(lead_expression)
 

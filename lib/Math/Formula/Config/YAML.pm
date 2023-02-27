@@ -22,7 +22,8 @@ Math::Formula::Config::YAML - load/save formulas to file in YAML
 =section Constructors
 =cut
 
-#------------------
+#----------------------
+=section Actions
 
 =method save $context, %args
 Serialize the $context to YAML files, as storage or to be editted by hand.
