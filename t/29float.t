@@ -86,6 +86,8 @@ my @infix = (
 	[ -1 => 'MF::INTEGER' => '1.0 <=> 2.0' ],
 	[  0 => 'MF::INTEGER' => '2.0 <=> 2.0' ],
 	[  1 => 'MF::INTEGER' => '3.0 <=> 2.0' ],
+
+	[ 3.14 => 'MF::FLOAT' => 3.14 ],
 );
 
 foreach (@infix)

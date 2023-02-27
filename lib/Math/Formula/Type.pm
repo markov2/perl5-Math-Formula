@@ -158,6 +158,14 @@ package
 
 use base 'Math::Formula::Type';
 
+# $class->new($token, $value, %options)
+# When the value is derived from an expression, this should result in 1 or 0
+sub new($$@)
+{	my ($class, $token, $value) = (shift, shift, shift);
+	defined $token or $value = $value ? 1 : 0;
+	$class->SUPER::new($token, $value, @_);
+}
+
 sub prefix($)
 {	my ($self, $op, $context) = @_;
 	if($op eq 'not')
@@ -229,13 +237,6 @@ use base 'Math::Formula::Type';
 
 use Unicode::Collate ();
 my $collate = Unicode::Collate->new;  #XXX which options do we need?
-
-# Perl's false is 'undef': convert it to '0'
-sub new($$@)
-{	my ($class, $token, $value) = (shift, shift, shift);
-	$value //=0 unless defined $token;
-	$class->SUPER::new($token, $value, @_);
-}
 
 sub _token($) { '"' . ($_[1] =~ s/[\"]/\\$1/gr) . '"' }
 

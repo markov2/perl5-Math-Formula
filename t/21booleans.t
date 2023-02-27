@@ -11,10 +11,30 @@ use Math::Formula::Context ();
 
 my $expr = Math::Formula->new(test => 1);
 
+my $b1 = MF::BOOLEAN->new(undef, 1 > 2);
+is $b1->token, 'false', 'boolean from calculation, false';
+is $b1->value, '0';
+
+my $b2 = MF::BOOLEAN->new(undef, '');
+is $b2->token, 'false', '...';
+is $b2->value, '0';
+
+my $b3 = MF::BOOLEAN->new(undef, undef);
+is $b3->token, 'false', '...';
+is $b3->value, '0';
+
+my $b4 = MF::BOOLEAN->new(undef, 2 > 1);
+is $b4->token, 'true', 'boolean from calculation, true';
+is $b4->value, '1';
+
+my $b5 = MF::BOOLEAN->new(undef, 42);
+is $b5->token, 'true', '...';
+is $b5->value, '1';
+
 ### PREFIX operators
 
-is_deeply $expr->_tokenize('true'),     [MF::BOOLEAN->new('true')];
-is_deeply $expr->_tokenize('false'),    [MF::BOOLEAN->new('false')];
+is_deeply $expr->_tokenize('true'),     [ MF::BOOLEAN->new('true') ];
+is_deeply $expr->_tokenize('false'),    [ MF::BOOLEAN->new('false') ];
 
 ### INFIX operators
 
