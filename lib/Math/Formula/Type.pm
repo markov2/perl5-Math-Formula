@@ -424,7 +424,7 @@ sub infix($$$)
 my $gibi        = 1024 * 1024 * 1024;
 
 my $multipliers = '[kMGTEZ](?:ibi)?\b';
-sub _multipliers { $multipliers }
+sub _match { "[0-9][0-9_]* (?:$multipliers)?" }
 
 my %multipliers = (
 	k => 1000, M => 1000_000, G => 1000_000_000, T => 1000_000_000_000, E => 1e15, Z => 1e18,

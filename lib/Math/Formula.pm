@@ -177,7 +177,7 @@ sub _test($$)
 ### PARSER
 ###
 
-my $multipliers = MF::INTEGER->_multipliers;
+my $match_int   = MF::INTEGER->_match;
 my $match_float = MF::FLOAT->_match;
 my $match_name  = MF::NAME->_match;
 my $match_date  = MF::DATE->_match;
@@ -202,7 +202,7 @@ sub _tokenize($)
 	$s =~ m/ ^
 	(?: \s*
 	  (?| \# (?: \s [^\n\r]+ | $ ) \
-		| ( true | false )	(?{ push @t, MF::BOOLEAN->new($+) })
+		| ( true\b | false\b )	(?{ push @t, MF::BOOLEAN->new($+) })
 		| ( \" (?: \\\" | [^"] )* \" )
 							(?{ push @t, MF::STRING->new($+) })
 		| ( \' (?: \\\' | [^'] )* \' )
@@ -214,8 +214,7 @@ sub _tokenize($)
 		| ( $match_date )	(?{ push @t, MF::DATE->new($+) })
 		| ( $match_time )	(?{ push @t, MF::TIME->new($+) })
 		| ( $match_float )	(?{ push @t, MF::FLOAT->new($+) })
-		| ( [0-9][0-9_]*(?:$multipliers)? )
-							(?{ push @t, MF::INTEGER->new($+) })
+		| ( $match_int )	(?{ push @t, MF::INTEGER->new($+) })
 		| \(				(?{ push @t, MF::PARENS->new('(', ++$parens_open) })
 		| \)				(?{ push @t, MF::PARENS->new(')', $parens_open--) })
 		| $
