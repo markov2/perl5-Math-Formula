@@ -12,6 +12,7 @@ lib/Math/Formula/Token.pm
 lib/Math/Formula/Type.pm
 t/01use.t
 t/10formula.t
+t/11totype.t
 t/20integers.t
 t/21booleans.t
 t/22strings.t
