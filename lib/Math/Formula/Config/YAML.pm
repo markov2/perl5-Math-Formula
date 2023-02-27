@@ -38,14 +38,18 @@ sub save($%)
 	my $name  = $context->name;
 
 	my $index = $context->_index;
-	my $tree  = $self->_set($index->{attributes});
-	$tree->{formulas} = $self->_set($index->{formulas});
 
 	my $fn = $self->path_for($args{filename} || "$name.yml");
 	open my $fh, '>:encoding(utf8)', $fn
 		or fault __x"Trying to save context '{name}' to {fn}", name => $name, fn => $fn;
 
-	$fh->print(Dump $tree);
+	local $YAML::UseHeader = 0;
+	$fh->print("--- context attributes\n");
+	$fh->print(Dump $self->_set($index->{attributes}));
+	$fh->print("--- formulas\n");
+	$fh->print(Dump $self->_set($index->{formulas}));
+	$fh->print("--- fragments\n");
+
 	$fh->close
 		or fault __x"Error on close while saving '{name}' to {fn}", name => $name, fn => $fn;
 }
@@ -54,6 +58,8 @@ sub _set($)
 {	my ($self, $set) = @_;
 	my %data;
 	$data{$_ =~ s/^ctx_//r} = $self->_serialize($_, $set->{$_}) for keys %$set;
+
+	$data{noq} = 'aap';
 	\%data;
 }
 
@@ -67,9 +73,12 @@ sub _serialize($$)
 	}
 
 	my $v = '';
-	if(blessed $what && $what->isa('Math::Formula::Type'))
-#	{	$v	= $what->isa('MF::STRING') ? $what->token =~ s/"/\\"/gr : $what->token;
-	{	$v	= $what->token;
+	if(blessed $what && $what->isa('MF::STRING'))
+	{	$v = $what->value;
+	}
+	elsif(blessed $what && $what->isa('Math::Formula::Type'))
+	{	$v	= ($what->isa('MF::INTEGER') || $what->isa('MF::FLOAT') ? '' : '=')
+			. $what->token;
 	}
 	elsif(ref $what eq 'CODE')
 	{	warning __x"cannot (yet) save CODE, skipped '{name}'", name => $name;

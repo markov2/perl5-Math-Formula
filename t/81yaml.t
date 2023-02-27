@@ -30,9 +30,11 @@ $context->add( {
 	some_truth => MF::BOOLEAN->new('true'),
 	fakes      => MF::BOOLEAN->new('false'),
 	no_quotes  => MF::STRING->new(undef, 'abc'),
+	int        => MF::INTEGER->new(undef, 42),
+	float      => MF::FLOAT->new(undef, 3.14),
+	string     => MF::STRING->new(undef, 'true'),
 	expr1      => "1 + 2 * 3",
 	expr2      => [ '"abc".size + 3k', returns => 'MF::INTEGER' ],
-	
 });
 
 my $config = Math::Formula::Config::YAML->new(directory => $dir);
