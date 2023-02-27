@@ -124,45 +124,45 @@ Load a M<Math::Formula::Context> for a yml file.
 =cut
 
 sub load($%)
-{   my ($self, $name, %args) = @_;
-    my $fn   = $self->path_for($args{filename} || "$name.yml");
+{	my ($self, $name, %args) = @_;
+	my $fn   = $self->path_for($args{filename} || "$name.yml");
 
- 	local $YAML::XS::Boolean = "boolean";
-    my ($attributes, $forms, $frags) = Load(read_binary $fn);
+	local $YAML::XS::Boolean = "boolean";
+	my ($attributes, $forms, $frags) = Load(read_binary $fn);
 
-    my $attrs = $self->_set_decode($attributes);
-    Math::Formula::Context->new(name => $name,
-        %$attrs,
-        formulas => $self->_set_decode($forms),
-    );
+	my $attrs = $self->_set_decode($attributes);
+	Math::Formula::Context->new(name => $name,
+		%$attrs,
+		formulas => $self->_set_decode($forms),
+	);
 }
 
 sub _set_decode($)
-{   my ($self, $set) = @_;
-    $set or return {};
+{	my ($self, $set) = @_;
+	$set or return {};
 
-    my %forms;
-    $forms{$_} = $self->_unpack($_, $set->{$_}) for keys %$set;
-    \%forms;
+	my %forms;
+	$forms{$_} = $self->_unpack($_, $set->{$_}) for keys %$set;
+	\%forms;
 }
 
 sub _unpack($$)
-{   my ($self, $name, $encoded) = @_;
-    my $dummy = Math::Formula->new('dummy', '7');
+{	my ($self, $name, $encoded) = @_;
+	my $dummy = Math::Formula->new('dummy', '7');
 
 	if(ref $encoded eq 'boolean')
 	{	return MF::BOOLEAN->new(undef, $encoded);
 	}
 
-    if($encoded =~ m/^\=(.*?)(?:;\s*(.*))?$/)
-    {   my ($expr, $attrs) = ($1, $2 // '');
-        my %attrs = $attrs =~ m/(\w+)\='([^']+)'/g;
-        return Math::Formula->new($name, $expr =~ s/\\"/"/gr, %attrs);
-    }
+	if($encoded =~ m/^\=(.*?)(?:;\s*(.*))?$/)
+	{	my ($expr, $attrs) = ($1, $2 // '');
+		my %attrs = $attrs =~ m/(\w+)\='([^']+)'/g;
+		return Math::Formula->new($name, $expr =~ s/\\"/"/gr, %attrs);
+	}
 
-      $encoded =~ qr/^[0-9]+$/           ? MF::INTEGER->new($encoded)
-    : $encoded =~ qr/^[0-9][0-9.e+\-]+$/ ? MF::FLOAT->new($encoded)
-    : MF::STRING->new(undef, $encoded);
+	  $encoded =~ qr/^[0-9]+$/           ? MF::INTEGER->new($encoded)
+	: $encoded =~ qr/^[0-9][0-9.e+\-]+$/ ? MF::FLOAT->new($encoded)
+	: MF::STRING->new(undef, $encoded);
 }
 
 
