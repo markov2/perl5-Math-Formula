@@ -16,6 +16,12 @@ Math::Formula::Config::JSON - load/save formulas to file
 
 =chapter SYNOPSIS
 
+  my $context = Math::Formula::Content->new(name => 'test');
+  my $config = Math::Formula::Config::INI->JSON(directory => $dir);
+
+  $config->save($context);
+  my $context = $config->load('test');
+
 =chapter DESCRIPTION
 
 =chapter METHODS

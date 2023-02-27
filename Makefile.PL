@@ -7,11 +7,12 @@ WriteMakefile
   ( NAME	 => 'Math::Formula'
   , VERSION      => '0.14'
   , PREREQ_PM    =>
-    { 'Test::More'   => 0,
-    , 'Log::Report'  => 0,
-	, 'POSIX'        => 0,
-	, 'Scalar::Util' => 0,
-	, 'File::Spec'   => 0,
+    { 'Test::More'    => 0,
+    , 'Log::Report'   => 0,
+	, 'POSIX'         => 0,
+	, 'Scalar::Util'  => 0,
+	, 'File::Spec'    => 0,
+	' 'File::Slurper' => 0,
 
 	, 'DateTime'           => 0,
 	, 'DateTime::Duration' => 0,

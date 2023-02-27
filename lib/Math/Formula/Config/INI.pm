@@ -19,10 +19,20 @@ Math::Formula::Config::INI - load/save formulas to file as INI
 
 =chapter SYNOPSIS
 
+  my $context = Math::Formula::Content->new(name => 'test');
+  my $config = Math::Formula::Config::INI->new(directory => $dir);
+
+  $config->save($context);
+  my $context = $config->load('test');
+
 =chapter DESCRIPTION
 
 Save and load a M<Math::Formula::Context> to INI files.  The INI file
 is not too complex.
+
+You need to have installed B<Config::INI>.  That module is not in the
+dependencies of this packages, because we do not want to add complications
+to the main code.
 
 =chapter METHODS
 
@@ -132,7 +142,7 @@ sub _unpack($$)
 	if($encoded =~ m/^"(.*?)"(?:;\s*(.*))?$/)
 	{	my ($expr, $attrs) = ($1, $2 // '');
 		my %attrs = $attrs =~ m/(\w+)\='([^']+)'/g;
-		Math::Formula->new($name, $expr =~ s/\\"/"/gr, %attrs);
+		return Math::Formula->new($name, $expr =~ s/\\"/"/gr, %attrs);
 	}
 
 	  $encoded =~ qr/^[0-9]+$/           ? MF::INTEGER->new($encoded)
