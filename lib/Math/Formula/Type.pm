@@ -25,23 +25,24 @@ Math::Formula::Type - variable types for Math::Formular
   # See more details per section
 
 =chapter DESCRIPTION
-This page describes are Types used by M<Math::Formula>. All parts of an
-expression has a known type, and also the type of the result of an expression
-is known beforehand.
+This page describes all Types used by M<Math::Formula>.  The types are usually
+auto-detected.  Operations are driven by the data-types.
 
 =chapter METHODS
 
 =section Constructors
 
-=c_method new $token|undef, [$value], %options
+=c_method new $token|undef, [$value]
 The object is a blessed ARRAY.  On the first spot is the $token.  On the
 second spot might be the decoded value of the token, in internal Perl
 representation.  When no $token is passed (value C<undef> is explicit), then
 you MUST provide a $value.  The token will be generated on request.
 
-=option  attributes HASH
-=default attributes {}
-(MF::FRAGMENT only) Initial attributes, addressed with infix operator C<.> (dot).
+=examples
+
+  my $node = MF::BOOLEAN->new('true');    # value will be '1'
+  my $node = MF::BOOLEAN->new(undef, 1);  # token will be 'true'
+  my $node = MF::DATETIME->new(undef, DateTime->now);
 
 =cut
 
@@ -77,7 +78,8 @@ sub cast($)
 
 =method token
 Returns the token in string form.  This may be a piece of text as parsed
-from the expression string, or generated when the token is computed.
+from the expression string, or generated when the token is computed from
+the value.
 =cut
 # token() is implemented in de base-class ::Token, but documented here
 
@@ -134,7 +136,7 @@ sub infix($@)
 }
 
 #-----------------
-=section MF::BOOLEAN, a thruth value
+=section MF::BOOLEAN, a truth value
 Represents a truth value, either C<true> or C<false>.
 
 Booleans implement the prefix operator "C<+>", and infix operators 'C<and>',
@@ -195,7 +197,7 @@ sub _value($) { $_[1] eq 'true' }
 
 #-----------------
 =section MF::STRING, contains text
-Represents a sequence of UTF8 characters, which may be used single and
+Represents a sequence of UTF-8 characters, which may be used single and
 double quoted.
 
 Strings may be cast into regular expressions (MF::REGEXP) when used on the right
@@ -209,7 +211,7 @@ Besides the four match operators, strings can be concatenated using 'C<~>'.
 Strings also implement textual comparison operators C<lt>, C<le>, C<eq>,
 C<ne>, C<ge>, C<gt>, and C<cmp>.  Read its section in M<Math::Formula>.
 These comparisons use L<Unicode::Collate> in an attempt to get correct
-utf8 sorting.
+UTF-8 sorting.
 
 B<Warning!> When you create an expression which is only one string, then you
 will probably forget the double quotes:
@@ -345,11 +347,11 @@ with floats.
 
 =examples of integers
 
-  42        # the answer to everything
-  8T        # how my disk was sold to me
-  7451Mibi  # what my system tells me the space is
-  -12       # negatives
-  1_234_567 # _ on the thousands, more readible
+  42            # the answer to everything
+  8T            # how my disk was sold to me
+  7451Mibi      # what my system tells me the space is
+  -12           # negatives
+  1_234_567     # _ on the thousands, more readible
 
   + 2          -> INTEGER   2      # prefix op
   - 2          -> INTEGER   -2     # prefix op
@@ -1017,16 +1019,16 @@ On the right-side of a fragment indicator C<#> or method indicator C<.>,
 the name will be lookup in the features of the object on the left of that
 operator.
 
-A name which is not right of a C<#> or C<.> can be cast into an object
-from the context.
+A name which is not right of a hash (C<#>) or dot (C<.>) can be cast
+into an object from the context.
 
 Names are symbol: are not a value by themselves, so have no values to
 be ordered.  However, they may exist however: test it with prefix operator
 C<exists>.
 
-The more complicated concept is the C<//> operator.  When there is no
-formula with the name on the left side, the right side is taken.  This
-is often stacked with a constant default value at the end.
+The more complicated concept is the 'defaults to' operator (C<//>).
+When there is no formula with the name on the left side, the right side
+is taken.  This is often stacked with a constant default value at the end.
 
 =examples of names
 

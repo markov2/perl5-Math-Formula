@@ -35,7 +35,8 @@ Math::Formula - expressions on steroids
 
 B<WARNING:> This is not a programming language: it lacks control structures
 like loops and blocks.  This can be used to get (very) flexible configuration
-files for your program.
+files for your program.  See M<Math::Expression::Context> and
+M<Math::Expression::Config>.
 
 B<What makes Math::Formula special?> Zillions of expression evaluators
 have been written in the past.  The application where this module was
@@ -98,13 +99,11 @@ now be a smart expression.  Declarative programming.
 
 =c_method new $name, $expression, %options
 
-=requires name $name
-The expression need a name, to be able to produce desent error messages.
+The expression need a $name, to be able to produce desent error messages.
 But also to be able to cache the results in the "Context".  Expressions
 can refer to each other via this name.
 
-=requires expression $expression
-The expression is usually a (utf8) string, which will get parsed and
+The $expression is usually a (utf8) string, which will get parsed and
 evaluated on demand.  The $expresion may also be a prepared node (any
 <Math::Formula::Type> object.
 
@@ -132,8 +131,7 @@ sub new(%)
 
 sub init($)
 {	my ($self, $args) = @_;
-	my $name = $self->{MSBE_name} = $args->{_name} or panic "every formular requires a name";
-
+	my $name    = $self->{MSBE_name} = $args->{_name} or panic "every formular requires a name";
 	my $expr    = $args->{_expr} or panic "every formular requires an expression";
 	my $returns = $self->{MSBE_returns} = $args->{returns};
 
@@ -246,9 +244,6 @@ sub _build_ast($$)
   PROGRESS:
 	while(my $first = shift @$t)
 	{
-#use Data::Dumper; $Data::Dumper::Indent = 0;
-#warn "LOOP FIRST ", Dumper $first;
-#warn "     MORE  ", Dumper $t;
 		if($first->isa('MF::PARENS'))
 		{	my $level = $first->level;
 
@@ -402,7 +397,7 @@ Let's start with a large group of related formulas, and the types they produce:
   birthday: 1966-04-05      # DATE
   os_lib: #system           # external OBJECT
   now: os_lib.now           # DATETIME 'now' is an attribute of system
-  today: now.date           # DATE 'date' is an attribute of DATETIME
+  today: now.date           # DATE 'today' is an attribute of DATETIME
   alive: today - birthday   # DURATION
   age: alive.years          # INTEGER 'years' is an attr of DURATION
 
@@ -431,8 +426,9 @@ prefixes are weird cases: see M<Math::Formula::Context>.
 Operators work on explicit data types.
 Of course, you can use parenthesis for grouping.
 
-The B<infix> operators have the following priorities: (from low to higher,
-each like with equivalent priority)
+B<Prefix> operators always have the highest priority, and work right
+to left (RTL) The B<infix> and B<ternary> operators have the following
+priorities: (from low to higher, each like with equivalent priority)
 
   LTR       ?:                             # if ? then : else
   LTR       or   xor  //

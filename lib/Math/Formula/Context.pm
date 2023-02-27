@@ -9,17 +9,23 @@ use Scalar::Util qw/blessed/;
 
 =chapter NAME
 
-Math::Formula::Context - calculation context
+Math::Formula::Context - Calculation context, pile of expressions
 
 =chapter SYNOPSIS
 
   my $context = Math::Formula::Context->new();
+  $context->add({
+    event       => \'Wedding',
+    diner_start => '19:30:00',
+    door_open   => 'dinner_start - PT1H30',
+  });
+  print $context->value('door_open');  # 18:00:00
 
 =chapter DESCRIPTION
 
 Like in web template systems, evaluation of expressions can be effected by the
-computation context which contains values.  The Context object manages these
-values: it runs the right expressions.
+computation context which contains values.  Thise Context object manages these
+values; in this case, it runs the right expressions.
 
 =chapter METHODS
 
@@ -95,9 +101,14 @@ Contexts are required to have a name.  Usually, this is the name of the fragment
 well.
 
 =method lead_expressions
+Returns the string which needs to be prepended to each of the formulas
+which are added to the context.  When an empty string (the default),
+formulas have no identification which distinguishes them from string.  In that case,
+be sure to pass strings as references.
+
 =cut
 
-sub name            { $_[0]->{MFC_name} }
+sub name             { $_[0]->{MFC_name} }
 sub lead_expressions { $_[0]->{MFC_lead} }
 
 #--------------
@@ -183,7 +194,7 @@ sub add(@)
 =method addFormula LIST
 Add a single formula to this context.  The formula is returned.
 
-=examples
+=example of addFormula
 
 Only the 3rd and 4th line of the examples below are affected by C<new(lead_expresssions)>:
 only in those cases it is unclear whether we speak about a STRING or an expression.  But,
@@ -401,7 +412,7 @@ are not too complex:
       size     => sub { MF::INTEGER->new(-s $filename) },
       path     => sub { \File::Spec->catfile($dir, $filename) },
       is_image => 'name =~ "*.{jpg,png,gif}"',
-	  π        => MF::FLOAT->new(undef, 3.14),    # constant
+      π        => MF::FLOAT->new(undef, 3.14),    # constant
     });
   $context->addFragment($fragment);
   $context->addFormula(allocate => '#file.size * 10k');

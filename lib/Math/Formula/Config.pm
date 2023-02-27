@@ -20,16 +20,16 @@ Math::Formula::Config - load/save formulas to file
 The extensions of this module can be used to export and import
 sets of expressions to and from a program.
 
-The following formats are supported:
+The following serialization formats are supported:
 =over 4
-=item * JSON M<Math::Formula::Config::JSON>
-=item * YAML M<Math::Formula::Config::YAML>
-=item * INI  M<Math::Formula::Config::INI>
+=item * JSON M<Math::Formula::Config::JSON> (save)
+=item * YAML M<Math::Formula::Config::YAML> (save)
+=item * INI  M<Math::Formula::Config::INI>  (save and load)
 =back
 
-At the moment, B<loading is not yet supported>.  That implementation will
-certainly impact the output format.  The current version is ment for
-studying.
+At the moment, B<loading is not generally supported>: it produces only satisfactory
+results for INI, but improvements are under way.  That implementation will
+certainly impact the output format.  The current version is ment for studying.
 
 =chapter METHODS
 
@@ -59,11 +59,14 @@ sub init($)
 =section Attributes
 
 =method directory
+When the configuration files will be written, and are read.
 =cut
 
 sub directory { $_[0]->{MFC_dir} }
 
 =method path_for $file
+Constructs a filename, based on the configured M<directory()>, the context's name,
+and the usual filename extensions.
 =cut
 
 sub path_for($$)
@@ -75,7 +78,7 @@ sub path_for($$)
 =section Actions
 
 =method save $context, %args
-Serialize the $context to a files as storage or to be editted by hand.
+Serialize the $context into a file as storage or to be editted by hand.
 This is a usefull method when default configuration templates need to
 be generated.
 =cut

@@ -37,7 +37,7 @@ Serialize the $context to INI files, as storage or to be editted by hand.
 This is a usefull method when default configuration templates need to be generated.
 
 =option filename STRING
-=default filename C<< $context->name .ini>
+=default filename C<< $context->name .ini >>
 Save under a different filename than derived from the name of the context.
 =cut
 
