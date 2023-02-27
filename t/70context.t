@@ -39,12 +39,12 @@ ok defined $f2, 'formula with params as array';
 
 isa_ok $f2, 'Math::Formula', '...';
 is $f2->name, 'gosleep';
-is $f2->expression, '23:30:00';
+is_deeply $f2->expression, '23:30:00';
 
 my $f2b = $context->formula('gosleep');
 ok defined $f2b,  '... retrieved';
 is $f2b->name, 'gosleep';
-is $f2b->expression, '23:30:00';
+is_deeply $f2b->expression, '23:30:00';
 
 my $f3 = my $awake =
 	Math::Formula->new(awake => 'gosleep - wakeup', returns => 'MF::DURATION');

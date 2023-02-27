@@ -31,6 +31,13 @@ Many of the %options make sense when this context is reloaded for file.
 =option  formula $form|ARRAY
 =default formula C< [] >
 One or more formula, passed to M<add()>.
+
+=option  lead_expression ''|STRING
+=default lead_expression ''
+Read section M</"Keep strings apart from expressions"> below.  When a blank string,
+you will need to put (single or double) quotes around your strings within your strings,
+or pass a SCALAR reference.  But that may be changed.
+
 =cut
 
 sub new(%) { my $class = shift; (bless {}, $class)->init({@_}) }
@@ -60,6 +67,7 @@ sub init($)
 		ctx_mf_version => $self->_default(mf_version => 'MF::STRING', $args->{mf_version}, $Math::Formula::VERSION),
 	};
 
+	$self->{MFC_lead}   = $args->{lead_expression} // '';
 	$self->{MFC_forms}  = { };
 	$self->{MFC_frags}  = { };
 	if(my $forms = $args->{formulas})
@@ -86,9 +94,11 @@ sub _index()
 Contexts are required to have a name.  Usually, this is the name of the fragment as
 well.
 
+=method lead_expression
 =cut
 
-sub name   { $_[0]->{MFC_name} }
+sub name            { $_[0]->{MFC_name} }
+sub lead_expression { $_[0]->{MFC_lead} }
 
 #--------------
 =section Fragment (this context) attributes
@@ -129,6 +139,7 @@ or a HASH with
 
 =examples:
   $context->add(wakeup => '07:00:00', returns => 'MF::TIME');
+  $context->add(fruit  => \'apple', returns => 'MF::TIME');
   
   my $form = Math::Formula->new(wakeup => '07:00:00', returns => 'MF::TIME');
   $context->add($form, @more_forms, @fragments, @hashes);
@@ -171,32 +182,58 @@ sub add(@)
 
 =method addFormula LIST
 Add a single formula to this context.  The formula is returned.
+
 =examples
+
+Only the 3rd and 4th line of the examples below are affected by C<new(lead_expresssion)>:
+only in those cases it is unclear whether we speak about a STRING or an expression.  But,
+inconveniently, those are popular choices.
+
   $context->addFormula($form);            # already created somewhere else
   $context->addFormula(wakeup => $form);  # register under a (different) name
+  $context->addFormula(wakeup => '07:00:00');      # influenced by lead_expression
+  $context->addFormula(wakeup => [ '07:00:00' ]);  # influenced by lead_expression
   $context->addFormula(wakeup => '07:00:00', returns => 'MF::TIME');
   $context->addFormula(wakeup => [ '07:00:00', returns => 'MF::TIME' ]);
   $context->addFormula(wakeup => sub { '07:00:00' }, returns => 'MF::TIME' ]);
   $context->addFormula(wakeup => MF::TIME->new('07:00:00'));
+  $context->addFormula(wakeup => \'early');
 =cut
 
 sub addFormula(@)
-{	my ($self, $first) = (shift, shift);
-	my $next = $_[0];
+{	my ($self, $name) = (shift, shift);
+	my $next  = $_[0];
+	my $forms = $self->{MFC_forms};
 
-	my ($name, $form) =
-	  !@_ && blessed $first && $first->isa('Math::Formula')
-	? ($first->name, $first)
-	: @_==1 && !ref $first && blessed $next && $next->isa('Math::Formula')
-	? ($first, $next)
-	: @_==1 && !ref $first && ref $next eq 'ARRAY'
-	? ($first, Math::Formula->new($first, @{$next}))
-	: @_ && !ref $first &&
-		 (!ref $next || ref $next eq 'CODE' || blessed $next && $next->isa('Math::Formula::Type'))
-	? ($first, Math::Formula->new($first, @_))
-	: panic __x"formula declaration '{name}' not understood", name => $first;
+	if(ref $name)
+	{	return $forms->{$name->name} = $name
+			if !@_ && blessed $name && $name->isa('Math::Formula');
+	}
+	elsif(! ref $name && @_)
+	{	return $forms->{$name} = $next
+			if @_==1 && blessed $next && $next->isa('Math::Formula');
 
-	$self->{MFC_forms}{$name} = $form;
+		return $forms->{$name} = Math::Formula->new($name, @_)
+			if ref $next eq 'CODE';
+
+		return $forms->{$name} = Math::Formula->new($name, @_)
+			if blessed $next && $next->isa('Math::Formula::Type');
+
+		my ($data, %attrs) = @_==1 && ref $next eq 'ARRAY' ? @$next : $next;
+		if(my $r = $attrs{returns})
+		{	my $typed = $r->isa('MF::STRING') ? $r->new(undef, $data) : $data;
+			return $forms->{$name} = Math::Formula->new($name, $typed, %attrs);
+		}
+
+		if(length(my $leader = $self->lead_expression))
+		{	my $typed  = $data =~ s/^\Q$leader// ?  MF::STRING->new(undef, $data) : $data;
+			return $forms->{$name} = Math::Formula->new($name, $typed, %attrs);
+		}
+
+		return $forms->{$name} = Math::Formula->new($name, $data, %attrs);
+	}
+
+	error __x"formula declaration '{name}' not understood", name => $name;
 }
 
 =method formula $name
@@ -287,6 +324,39 @@ sub value($@)
 #--------------
 =chapter DETAILS
 
+=section Keep strings apart from expressions
+
+One serious complication in combining various kinds of data in strings, is
+expressing the distinction between strings and the other things.  Strings
+can contain any kind of text, and hence may look totally equivalent
+to the other things.  Therefore, you will need some kind of encoding,
+which can be selected with M<new(lead_expression)> or M<add(lead_expression)>.
+
+When C<lead_expression> is the empty string (default), then expressions have no
+leading flag, so the following can be used:
+
+   text_field => \"string"
+   text_field => \'string'
+   text_field => \$string
+   text_field => '"string"'
+   text_field => "'string'"
+   expr_field => '1 + 2 * 3'
+
+But C<lead_expression> can be anything.  For instance, easy to remember is C<=>. In
+that case, the added data can look like
+
+   text_field => \"string"
+   text_field => \'string'
+   text_field => \$string
+   text_field => "string"
+   text_field => 'string'
+   text_field => $string       <-- unsafe?
+   expr_field => '= 1 + 2 * 3'
+
+Of course, this introduces the security risk in the C<$string> case, which might
+carry a C<=> by accident.  So: although useable, refrain from using that form
+unless you are really, really sure this can never be confused.
+
 =section Creating an interface to an object (fragment)
 
 For safity reasons, the formulars can not directly call methods on data
@@ -320,25 +390,28 @@ The way to create an interface looks: (first the long version)
 Of course, there are various simplifications possible, when the calculations
 are not too complex:
 
-  my $filename  = '...';
-  my $fragment = Math::Formula::Context->new(name => 'file',
-    attributes => {
-      name     => sub { MF::STRING->new($filename) },
+  my ($dir, $filename) = (..., ...);
+  my $fragment = Math::Formula::Context->new(
+    name     => 'file',
+    formulas => {
+      name     => \$filename,
       size     => sub { MF::INTEGER->new(-s $filename) },
+      path     => sub { \File::Spec->catfile($dir, $filename) },
       is_image => 'name =~ "*.{jpg,png,gif}"',
 	  π        => MF::FLOAT->new(undef, 3.14),    # constant
     });
-  $context->addAttribute(allocate => '#file.size * 10k');
+  $context->addFragment($fragment);
+  $context->addFormula(allocate => '#file.size * 10k');
   print $context->value('#file.allocate');
 
 In above example, the return type of the CODE for C<size> is explicit: this is
 the fastest and safest way to return data.  However, it can also be guessed:
 
-      size     => sub { -s $filename },
+  size     => sub { -s $filename },
 
 For clarity: the three syntaxes:
 
-  .name           an attribute to the context
+  .ctx_name       an attribute to the context
   allocate        a formula in the context
   allocate.abs    an attribute of the expression result
   #file           interface to an object, registered in the context
@@ -397,7 +470,7 @@ can be returned.  These are the types with examples for tokens and values:
   MF::DURATION  'P3Y2MT12M'       DateTime::Duration-object
   MF::NAME      'tac'             'tac'
   MF::PATTERN   '"*c"'            qr/^.*c$/ # like understands MF::REGEXP
-  MF::REGEXP    '"a.b"'           qr/^a.b$/
+  MF::REGEXP    '"a.b"'  qr//     qr/^a.b$/
   MF::FRAGMENT  'toe'             ::Context-object
 
 When you decide to be lazy, Math::Formula will attempt to auto-detect the

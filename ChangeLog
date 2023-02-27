@@ -10,7 +10,8 @@ version 0.13:
 	Improvements:
 	- implement config INI save and load
 	- booleans created from condition
-	- MF::STRING with reference
+	- implement MF::STRING with reference
+	- implement ::Context(lead_expression)
 
 version 0.12: Sun 26 Feb 10:10:29 CET 2023
 
