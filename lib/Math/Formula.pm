@@ -27,16 +27,16 @@ Math::Formula - expressions on steroids
 
   my $context = Math::Formula::Context->new(name => 'example');
   $context->add( { size => '42k', header => '324', total => 'size + header' });
-  my $total   = $context->value(total);
+  my $total   = $context->value('total');
 
   my $formula = Math::Formula->new(size => \&own_sub, %options);
 
 =chapter DESCRIPTION
 
-B<WARNING:> This is not a programming language: it lacks control structures
-like loops and blocks.  This can be used to get (very) flexible configuration
-files for your program.  See M<Math::Expression::Context> and
-M<Math::Expression::Config>.
+B<WARNING:> This is not a programming language: it lacks control
+structures, like loops and blocks.  This module can be used
+to get (very) flexible configuration (files) for your program.
+See M<Math::Expression::Context> and M<Math::Expression::Config>.
 
 B<What makes Math::Formula special?> Zillions of expression evaluators
 have been written in the past.  The application where this module was
@@ -44,44 +44,47 @@ written for has special needs which were not served by them.
 This expression evaluator can do things which are usually hidden behind
 library calls.
 
-For instance, where are many types which you can use in your configuration
+For instance, there are many types which can used in your configuration
 lines to calculate directly (examples far down on this page)
 
   true and false               # real booleans
   "abc"  'abc'                 # the usual strings, WARNING: read below
   7  89k  5Mibi                # integers with multiplier support
-  =~ "c$"                      # regular expressions
+  =~ "c$"                      # regular expression matching
   like "*c"                    # pattern matching
   2023-02-18T01:28:12+0300     # date-times
-  2023-02-18                   # dates
+  2023-02-18+0100              # dates
   01:18:12                     # times
   P2Y3DT2H                     # duration
   name                         # outcome of other expressions
-  #unit.owner                  # fragments (context, namespaces)
-  file.size                    # attributes
+  #unit.owner                  # fragments (nested context, namespaces)
+  "abc".length                 # attributes
   (1 + 2) * 3                  # parenthesis
 
-In your code, all these above are place between quotes.  This makes it
-inconvenient to use strings.  When you use a M<Math::Formula::Context>,
-you can select your own solution via M<Math::Formula::Context::new(lead_expressions)>.
-With plain formulas, there are only two options:
+WARNING: in your code, all these above are place between quotes.
+This makes it inconvenient to use strings, which are also between
+quotes.  So: strings should stand-out from expressions.  By default,
+use this:
 
   "\"string\""   '"string"'   "'$string'"   # $string with escaped quotes!
-  \"string"       \'string'   \$string      # use a SCALAR reference
+  \"string"       \'string'   \$string      # or, use a SCALAR reference
 
-With this, your expressions can look like this:
+When you use a M<Math::Formula::Context> (preferred), you can select your
+own solution via M<Math::Formula::Context::new(lead_expressions)>.
 
-  my_age   = (#system.now.date - 1966-05-04).years
-  is_adult = my_age >= 18
+Your expressions can look like this:
 
-Expressions can refer to values computed by other expressions.  The results are
-cached within the context.  Also, external objects can maintain libraries of
-formulas or produce compatible data.
+  my_age   => '(#system.now.date - 1966-05-04).years',
+  is_adult => 'my_age >= 18',
 
-B<Why do I need it?> My application has many kinds of configurable
-rules, often with dates and durations in it, to arrange processing.
-Instead of fixed, processed values in my configuration, each line can
-now be a smart expression.  Declarative programming.
+Expressions can refer to values computed by other expressions.  Also,
+external objects can maintain libraries of formulas or produce compatible
+data.
+
+B<Why do I need it?> <i>My</i> application has many kinds of configurable
+rules.  Those rules often use times and durations in it, to organize
+processing activities.  Each line in my configuration can now be a
+smart expression.  Declarative programming.
 
 =section Plans
 
@@ -99,21 +102,20 @@ now be a smart expression.  Declarative programming.
 
 =c_method new $name, $expression, %options
 
-The expression need a $name, to be able to produce desent error messages.
-But also to be able to cache the results in the "Context".  Expressions
-can refer to each other via this name.
+The expression needs a $name.  Expressions can refer to each other via this name.
 
 The $expression is usually a (utf8) string, which will get parsed and
 evaluated on demand.  The $expresion may also be a prepared node (any
-<Math::Formula::Type> object.
+<Math::Formula::Type> object).
 
 As special hook, you may also provide a CODE as $expression.  This will
 be called as
 
-  $expression->($context, $this_formula, %options_to_evaluate);
+  $expression->($context, $this_formula, %options);
 
 Optimally, the expression returns any M<Math::Formula::Type> object.  Otherwise,
-autodetection kicks in.  More details below in L<Math::Formula::Context/"CODE as expression">.
+auto-detection of the computed rsult kicks in.  The %options are passed to
+M<evaluate()>  More details below in L<Math::Formula::Context/"CODE as expression">.
 
 =option  returns $type
 =default returns C<undef>
@@ -153,7 +155,8 @@ sub init($)
 Returns the name of this expression.
 
 =method expression
-Returns the expression string, which was used at creation.
+Returns the expression, which was given at creation. Hence, it can be a string
+to be evaluated, a type-object, or a CODE reference.
 
 =method returns
 Set when the expression promisses to produce a certain type.
@@ -165,7 +168,8 @@ sub returns()    { $_[0]->{MSBE_returns} }
 
 =method tree $expression
 Returns the Abstract Syntax Tree of the $expression. Some of the types
-are only determined at the first run, for optimal laziness.
+are only determined at the first run, for optimal laziness.  Used for
+debugging purposes only.
 =cut
 
 sub tree($)

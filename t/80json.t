@@ -32,6 +32,8 @@ $context->add( {
 	no_quotes  => MF::STRING->new(undef, 'abc'),
 	longer     => \'abc def yes no',
 	int        => MF::INTEGER->new(undef, 42),
+	float      => MF::FLOAT->new(undef, 3.14),
+	string     => MF::STRING->new(undef, 'true'),
 	expr1      => "1 + 2 * 3",
 	expr2      => [ '"abc".size + 3k', returns => 'MF::INTEGER' ],
 	

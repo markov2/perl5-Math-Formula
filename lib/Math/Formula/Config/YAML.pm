@@ -77,8 +77,6 @@ sub _set($)
 {	my ($self, $set) = @_;
 	my %data;
 	$data{$_ =~ s/^ctx_//r} = $self->_serialize($_, $set->{$_}) for keys %$set;
-
-	$data{noq} = 'aap';
 	\%data;
 }
 
@@ -165,5 +163,39 @@ sub _unpack($$)
 	: MF::STRING->new(undef, $encoded);
 }
 
+#----------------------
+=chapter DETAILS
+
+YAML has a super powerfull syntax, which natively supports integers,
+floats, booleans, and strings.  But it can do so much more!  (What we
+are not gonna use (yet))
+
+The Context's attributes are in the first document.  The formulas are
+in the second document.  The fragments will get a place in the third
+document (but are not yet supported).
+
+On Perl, you will need M<YAML::XS> to be able to treat booleans
+correctly.  For instance, C<YAML.pm> will create a string with content
+'true' without quotes... which makes it a boolean.
+
+=example
+  ---
+  created: =2023-02-27T15:54:54+0000
+  mf_version: ''
+  name: test
+  updated: =2023-02-27T15:54:54+0000
+  version: '1.00'
+  ---
+  expr1: =1 + 2 * 3
+  expr2: ="abc".size + 3k; returns='MF::INTEGER'
+  fakes: false
+  float: 3.14
+  int: 42
+  longer: abc def yes no
+  no_quotes: abc
+  some_truth: true
+  string: 'true'
+  ---
+=cut
 
 1;

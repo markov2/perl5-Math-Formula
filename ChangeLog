@@ -7,7 +7,7 @@ version 0.14:
 	Improvements:
 	- cleaned-up more docs
 	- implement config YAML save and load
-	- implement config JSON save and load, first go
+	- implement config JSON save and load
 
 version 0.13: Mon 27 Feb 13:32:48 CET 2023
 

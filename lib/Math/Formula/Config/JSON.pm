@@ -7,9 +7,9 @@ use strict;
 use Log::Report 'math-formula';
 use Scalar::Util  'blessed';
 use File::Slurper 'read_binary';
-use JSON::XS  ();
+use Cpanel::JSON::XS  ();
 
-my $json = JSON::XS->new->pretty->utf8->canonical(1);
+my $json = Cpanel::JSON::XS->new->pretty->utf8->canonical(1);
 
 =chapter NAME
 
@@ -24,6 +24,12 @@ Math::Formula::Config::JSON - load/save formulas to file
   my $context = $config->load('test');
 
 =chapter DESCRIPTION
+
+Save and load a M<Math::Formula::Context> to JSON files.
+
+You need to have installed B<Cpanel::JSON::XS>.  That module is not in the
+dependencies of this packages, because we do not want to add complications
+to the main code.
 
 =chapter METHODS
 
@@ -80,6 +86,7 @@ sub _serialize($$)
 	{	# strings without quote
 		$v	= $what->isa('MF::STRING')  ? $what->value
 			: $what->isa('MF::BOOLEAN') ? ($what->value ? JSON::true : JSON::false)
+			: $what->isa('MF::FLOAT')   ? $what->value  # otherwise JSON writes a string
 			: $what->token;
 	}
 	elsif(ref $what eq 'CODE')
@@ -133,7 +140,7 @@ sub _unpack($$)
 {	my ($self, $name, $encoded) = @_;
 	my $dummy = Math::Formula->new('dummy', '7');
 
-	if(ref $encoded eq 'boolean')
+	if(ref $encoded eq 'JSON::PP::Boolean')
 	{	return MF::BOOLEAN->new(undef, $encoded);
 	}
 
@@ -143,11 +150,41 @@ sub _unpack($$)
 		return Math::Formula->new($name, $expr =~ s/\\"/"/gr, %attrs);
 	}
 
-	  $encoded =~ qr/^[0-9]+$/           ? MF::INTEGER->new($encoded)
-	: $encoded =~ qr/^[0-9][0-9.e+\-]+$/ ? MF::FLOAT->new($encoded)
+	# No JSON implementation parses floats and ints cleanly into SV
+	# So, we need to check it by hand.  Gladly, ints are converted
+	# to strings again when that was the intention.
+
+	  $encoded =~ qr/^[0-9]+$/           ? MF::INTEGER->new(undef, $encoded + 0)
+	: $encoded =~ qr/^[0-9][0-9.e+\-]+$/ ? MF::FLOAT->new(undef, $encoded + 0.0)
 	: MF::STRING->new(undef, $encoded);
 }
 
-1;
+#----------------------
+=chapter DETAILS
+
+JSON seems to be everyone's favorit serialization syntax, nowadays.  It natively
+supports integers, floats, booleans, and strings.  Formulas get a leading '='
+(not yet configurable).
+
+=example
+{
+   "created" : "2023-02-28T16:30:27+0000",
+   "formulas" : {
+      "expr1" : "=1 + 2 * 3",
+      "expr2" : "=\"abc\".size + 3k; returns='MF::INTEGER'",
+      "fakes" : false,
+      "float" : 3.14,
+      "int" : 42,
+      "longer" : "abc def yes no",
+      "no_quotes" : "abc",
+      "some_truth" : true,
+      "string" : "true"
+   },
+   "mf_version" : "",
+   "name" : "test",
+   "updated" : "2023-02-28T16:30:27+0000",
+   "version" : 1.0
+}
+=cut
 
 1;

@@ -12,7 +12,7 @@ WriteMakefile
 	, 'POSIX'         => 0,
 	, 'Scalar::Util'  => 0,
 	, 'File::Spec'    => 0,
-	' 'File::Slurper' => 0,
+	, 'File::Slurper' => 0,
 
 	, 'DateTime'           => 0,
 	, 'DateTime::Duration' => 0,
