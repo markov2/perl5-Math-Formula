@@ -36,7 +36,7 @@ Math::Formula - expressions on steroids
 B<WARNING:> This is not a programming language: it lacks control
 structures, like loops and blocks.  This module can be used
 to get (very) flexible configuration (files) for your program.
-See M<Math::Expression::Context> and M<Math::Expression::Config>.
+See M<Math::Formula::Context> and M<Math::Formula::Config>.
 
 B<What makes Math::Formula special?> Zillions of expression evaluators
 have been written in the past.  The application where this module was
@@ -63,8 +63,7 @@ lines to calculate directly (examples far down on this page)
 
 WARNING: in your code, all these above are place between quotes.
 This makes it inconvenient to use strings, which are also between
-quotes.  So: strings should stand-out from expressions.  By default,
-use this:
+quotes.  So: strings should stand-out from expressions.  By default, use this:
 
   "\"string\""   '"string"'   "'$string'"   # $string with escaped quotes!
   \"string"       \'string'   \$string      # or, use a SCALAR reference

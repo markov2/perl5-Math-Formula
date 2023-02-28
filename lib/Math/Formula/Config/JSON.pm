@@ -85,7 +85,7 @@ sub _serialize($$)
 	if(blessed $what && $what->isa('Math::Formula::Type'))
 	{	# strings without quote
 		$v	= $what->isa('MF::STRING')  ? $what->value
-			: $what->isa('MF::BOOLEAN') ? ($what->value ? JSON::true : JSON::false)
+			: $what->isa('MF::BOOLEAN') ? ($what->value ? Cpanel::JSON::XS::true : Cpanel::JSON::XS::false)
 			: $what->isa('MF::FLOAT')   ? $what->value  # otherwise JSON writes a string
 			: $what->token;
 	}
