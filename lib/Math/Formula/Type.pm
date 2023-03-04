@@ -402,6 +402,9 @@ sub infix($$$)
 	return $self->cast('MF::BOOLEAN', $context)->infix(@_)
 		if $op eq 'and' || $op eq 'or' || $op eq 'xor';
 
+	$right->cast('MF::INTEGER')
+		if $right->isa('MF::TIMEZONE');  # mis-parse
+
 	if($right->isa('MF::INTEGER') || $right->isa('MF::FLOAT'))
 	{   my $v = $op eq '+' ? $self->value + $right->value
 			  : $op eq '-' ? $self->value - $right->value
@@ -501,6 +504,9 @@ sub infix($$$)
 
 	return $self->cast('MF::BOOLEAN', $context)->infix(@_)
 		if $op eq 'and' || $op eq 'or' || $op eq 'xor';
+
+	$right->cast('MF::INTEGER')
+		if $right->isa('MF::TIMEZONE');  # mis-parse
 
 	if($right->isa('MF::FLOAT') || $right->isa('MF::INTEGER'))
 	{	# Perl will upgrade the integers

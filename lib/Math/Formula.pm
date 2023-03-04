@@ -284,9 +284,17 @@ sub _build_ast($$)
 		my $next = $t->[0]
 			or return $first;   # end of expression
 
-		ref $next eq 'MF::OPERATOR'
-			or error __x"expression '{name}', expected infix operator but found '{type}'",
-				name => $self->name, type => ref $next;
+		if(ref $next ne 'MF::OPERATOR')
+		{	if($next->isa('MF::TIMEZONE'))
+			{	# Oops, mis-parse
+				unshift @$t, $next->cast('MF::INTEGER');
+				$next = MF::OPERATOR->new('+');
+			}
+			else
+			{	error __x"expression '{name}', expected infix operator but found '{type}'",
+					name => $self->name, type => ref $next;
+			}
+		}
 
 		my $op = $next->token;
 		@$t or error __x"expression '{name}', infix operator '{op}' requires right-hand argument",

@@ -67,7 +67,16 @@ my @attrs = (
 	[ -45360, 'MF::INTEGER', "$tz.in_seconds" ],
 );
 
-foreach (@infix, @attrs)
+### CHECK FIXING PARSER ISSUE
+
+my @issues = (
+	[ 8000,     'MF::INTEGER', '8 * +1000' ],
+	[ '7500.0', 'MF::FLOAT',   '7.5 * +1000' ],
+	[ 1008,     'MF::INTEGER', '5 +1000 + 3' ],
+	[ -992,     'MF::INTEGER', '5 -1000 + 3' ],
+);
+
+foreach (@infix, @attrs, @issues)
 {	my ($result, $type, $rule) = @$_;
 
 	$expr->_test($rule);
