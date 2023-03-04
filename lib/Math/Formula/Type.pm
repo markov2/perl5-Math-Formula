@@ -918,6 +918,97 @@ sub infix($$@)
 }
 
 #-----------------
+=section MF::TIMEZONE, time-zone.
+Clock difference to UTC (Zulu).  The format requires a plus (C<+>) or minus (C<->) followed by
+two digits representing hours and two digits for minutes.
+
+Timezone supports numeric comparison.  When you add (C<+>) and subtract (C<->) a (short)
+duration to a timezone.
+
+When you subtract (C<->) one timezone from another, you will get a duration.
+
+=examples for timezone
+
+  +0000
+  -0612
+
+  -0600 + PT1H     -> -0500
+  +0230 - PT3H30M  -> -0100
+
+Attributes:
+
+  tz = -1236
+  tz.in_minutes    -> INTEGER -756
+  tz.in_seconds    -> INTEGER -45360
+
+=cut
+
+package
+	MF::TIMEZONE;
+use base 'Math::Formula::Type';
+use POSIX  'floor';
+
+sub _match { '[+-] (?: 0[0-9]|1[012] ) [0-5][0-9]' }
+
+sub _token($)
+{	my $count = $_[1];
+	my $sign = '+';
+	($sign, $count) = ('-', -$count) if $count < 0;
+	my $hours = floor($count / 60 + 0.0001);
+	my $mins  = $count % 60;
+	sprintf "%s%02d%02d", $sign, $hours, $mins;
+}
+
+# The value is stored in minutes
+
+sub _value($)
+{	my ($self, $token) = @_;
+	$token =~ m/^ ([+-]) (0[0-9]|1[012]) ([0-5][0-9]) $/x
+		or return;
+
+	($1 eq '-' ? -1 : 1) * ( $2 * 60 + $3 );
+}
+
+sub cast($)
+{	my ($self, $to) = @_;
+	if($to->isa('MF::INTEGER') || $to->isa('MF::FLOAT'))
+	{	# Oops, we mis-parsed and integer when 1[0-2][0-5][0-9]
+		$self->[1] = $self->[0] + 0;
+		$self->[0] = undef;
+		return bless $self, $to;
+	}
+	$self->SUPER::cast($to);
+}
+
+our %tz_attrs = (
+	in_seconds => sub { MF::INTEGER->new(undef, $_[0]->value * 60)  },
+	in_minutes => sub { MF::INTEGER->new(undef, $_[0]->value) },
+);
+
+sub attribute($) { $tz_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]) }
+
+sub prefix($$)
+{   my ($self, $op, $context) = @_;
+		$op eq '+' ? $self
+	  : $op eq '-' ? MF::TIMEZONE->new(undef, - $self->value)
+	  : $self->SUPER::prefix($op, $context);
+}
+
+sub infix($$@)
+{	my $self = shift;
+	my ($op, $right, $context) = @_;
+
+	if($op eq '+' || $op eq '-')
+	{	if(my $d = $right->isa('MF::DURATION') ? $right : $right->cast('MF::DURATION'))
+		{	return MF::TIMEZONE->new(undef, $self->value +
+				($op eq '-' ? -1 : 1) * floor($d->inSeconds / 60 + 0.000001));
+		}
+	}
+
+	$self->SUPER::infix(@_);
+}
+
+#-----------------
 =section MF::DURATION, a period of time
 Durations are usually added to datetimes, and may be negative.  They are formatted in
 ISO8601 standard format, which is a bit akward, to say the least.
@@ -951,6 +1042,12 @@ comparison.
 
   P1Y > P1M         -> BOOLEAN true
   PT20M <=> PT19M   => INTEGER 1     # -1, 0, 1
+
+Attributes
+
+  P1Y.in_days       -> INTEGER  365  (4yrs will have extra day)
+  P1H.in_seconds    -> INTEGER  3600
+
 =cut
 
 package
@@ -958,6 +1055,7 @@ package
 use base 'Math::Formula::Type';
 
 use DateTime::Duration ();
+use POSIX  qw/floor/;
 
 sub _match { '[+-]? P (?:[0-9]+Y)? (?:[0-9]+M)? (?:[0-9]+D)? '
 	. ' (?:T (?:[0-9]+H)? (?:[0-9]+M)? (?:[0-9]+(?:\.[0-9]+)?S)? )? \b';
@@ -1005,7 +1103,23 @@ sub infix($$@)
 	$self->SUPER::infix(@_);
 }
 
-my %dur_attrs;   # Sorry, the attributes of DateTime::Duration make no sense
+=method inSeconds
+Returns the duration in seconds, nanoseconds ignored.  This is exact when the duration
+only contains minutes and seconds.  When hours are involved, do you care about switching
+from and to Daylight Savingstime?  Months are taken as 1/12 of a year.  A year is taken
+as 365.256 year.  For exact calculations, add the duration to a DATETIME first.
+=cut
+
+sub inSeconds()
+{	my $d = $_[0]->value;
+	($d->years + $d->months/12) * 365.256 + $d->days * 86400 + $d->hours * 3600 + $d->minutes * 60 + $d->seconds;
+}
+
+my %dur_attrs = (
+	in_days    => sub { MF::INTEGER->new(undef, floor($_[0]->inSeconds / 86400 +0.00001)) },
+	in_seconds => sub { MF::INTEGER->new(undef, $_[0]->inSeconds) },
+);
+
 sub attribute($) { $dur_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]) }
 
 #-----------------

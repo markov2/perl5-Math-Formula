@@ -55,6 +55,7 @@ lines to calculate directly (examples far down on this page)
   2023-02-18T01:28:12+0300     # date-times
   2023-02-18+0100              # dates
   01:18:12                     # times
+  -0600                        # time-zone
   P2Y3DT2H                     # duration
   name                         # outcome of other expressions
   #unit.owner                  # fragments (nested context, namespaces)
@@ -80,7 +81,7 @@ Expressions can refer to values computed by other expressions.  Also,
 external objects can maintain libraries of formulas or produce compatible
 data.
 
-B<Why do I need it?> <i>My</i> application has many kinds of configurable
+B<Why do I need it?> I<My> application has many kinds of configurable
 rules.  Those rules often use times and durations in it, to organize
 processing activities.  Each line in my configuration can now be a
 smart expression.  Declarative programming.
@@ -193,6 +194,7 @@ my $match_float = MF::FLOAT->_match;
 my $match_name  = MF::NAME->_match;
 my $match_date  = MF::DATE->_match;
 my $match_time  = MF::TIME->_match;
+my $match_tz    = MF::TIMEZONE->_match;
 my $match_dt    = MF::DATETIME->_match;
 my $match_dur   = MF::DURATION->_match;
 
@@ -219,6 +221,7 @@ sub _tokenize($)
 		| ( \' (?: \\\' | [^'] )* \' )
 							(?{ push @t, MF::STRING->new($+) })
 		| ( $match_dur )	(?{ push @t, MF::DURATION->new($+) })
+		| ( $match_tz )		(?{ push @t, MF::TIMEZONE->new($+) })
 		| ( $match_op )		(?{ push @t, MF::OPERATOR->new($+) })
 		| ( $match_name )	(?{ push @t, MF::NAME->new($+) })
 		| ( $match_dt )		(?{ push @t, MF::DATETIME->new($+) })
@@ -447,7 +450,7 @@ The first value is a constant representing associativety.  Either the constant
 LTR (compute left to right), RTL (right to left), or NOCHAIN (non-stackable
 operator).
 
-=section Comparison operators
+=subsection Comparison operators
 
 Some data types support numeric comparison (implement C<< <=> >>, the
 spaceship operator), other support textual comparison (implement C< cmp >),
@@ -456,7 +459,7 @@ where also some types have no intrinsic order.
 The C<< <=> >> and C< cmp > return an integer: -1, 0, or 1, representing
 smaller, equal, larger.
 
-  =num  =text
+  :num: :text:
     <     lt      less than/before
     <=    le      less-equal
     ==    eq      equal/the same
@@ -465,7 +468,7 @@ smaller, equal, larger.
     >     gt      greater/larger
 
 String comparison uses L<Unicode::Collate>, which might be a bit expensive,
-but at least a better attempt to order utf8 correctly.
+but at least a better attempt to order UTF-8 correctly.
 
 =cut
 
