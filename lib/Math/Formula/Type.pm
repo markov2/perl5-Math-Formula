@@ -561,16 +561,16 @@ within the specified date range (from 00:00:00 in the morning upto 23:59:61 at n
 Attributes: (the date and time attributes combined)
 
   date = 2006-11-21T12:23:34.56+0110
-  dt.year    -> INTEGER 2006
-  dt.month   -> INTEGER 11
-  dt.day     -> INTEGER 21
-  dt.hour    -> INTEGER 12
-  dt.minute  -> INTEGER 23
-  dt.second  -> INTEGER 34
-  dt.fracsec -> FLOAT   34.56
-  dt.tz      -> STRING  +0110
-  dt.time    -> TIME    12:23:34.56
-  dt.date    -> DATE    2006-11-21+0110
+  dt.year     -> INTEGER  2006
+  dt.month    -> INTEGER  11
+  dt.day      -> INTEGER  21
+  dt.hour     -> INTEGER  12
+  dt.minute   -> INTEGER  23
+  dt.second   -> INTEGER  34
+  dt.fracsec  -> FLOAT    34.56
+  dt.timezone -> TIMEZONE +0110
+  dt.time     -> TIME     12:23:34.56
+  dt.date     -> DATE     2006-11-21+0110
 =cut
 
 package
@@ -694,10 +694,10 @@ in the same timezone, this will return false.
 Attributes:
 
   date = 2006-11-21+0700
-  date.year      -> INTEGER 2006
-  date.month     -> INTEGER 11
-  date.day       -> INTEGER 21
-  date.tz        -> STRING  "+0700"
+  date.year      -> INTEGER   2006
+  date.month     -> INTEGER   11
+  date.day       -> INTEGER   21
+  date.timezone  -> TIMEZONE  +0700
 =cut
 
 package
@@ -795,7 +795,7 @@ our %date_attrs = (
    year     => sub { MF::INTEGER->new(undef, $_[0]->value->year)  },
    month    => sub { MF::INTEGER->new(undef, $_[0]->value->month) },
    day      => sub { MF::INTEGER->new(undef, $_[0]->value->day) },
-   tz       => sub { MF::STRING ->new(undef, $_[0]->value->time_zone->name) },
+   timezone => sub { MF::TIMEZONE->new($_[0]->value->time_zone->name) },
 );
 sub attribute($) { $date_attrs{$_[1]} || $_[0]->SUPER::attribute($_[1]) }
 
@@ -828,17 +828,16 @@ the actual date:
   23:40:00 + PT7H  -> TIME 06:40:00   # early rise
   07:00:00 - 23
 
-  18:00:00+0200 ==  17:00:00+0100 -> BOOLEAN
-  18:00:00+0200 <=> 17:00:00+0100 -> INTEGER
+  18:00:00 ==  17:00:00 -> BOOLEAN
+  18:00:00 <=> 17:00:00 -> INTEGER
 
 Attributes:
 
-  time = 12:23:34.56+0110
+  time = 12:23:34.56
   time.hour        -> INTEGER 12
   time.minute      -> INTEGER 23
   time.second      -> INTEGER 34
   time.fracsec     -> FLOAT   34.56
-  time.tz          -> STRING  +0110
 
 =cut
 
