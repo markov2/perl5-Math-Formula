@@ -11,6 +11,7 @@ version 0.15:
 	Improvements:
 	- implement MF::TIMEZONE
 	- implement duration attributes in_seconds and in_days
+	- implement -> and captures
 
 version 0.14: Tue 28 Feb 17:34:40 CET 2023
 
