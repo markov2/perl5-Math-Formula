@@ -50,7 +50,7 @@ use constant {
 sub operator() { $_[0][0] }
 
 sub compute
-{	my ($self, $context, $expr) = @_;
+{	my ($self, $context) = @_;
 	panic +(ref $self) . ' does not compute';
 }
 
@@ -104,8 +104,8 @@ use base 'MF::OPERATOR';
 sub child() { $_[0][1] }
 
 sub compute($$)
-{	my ($self, $context, $expr) = @_;
-    my $value = $self->child->compute($context, $expr)
+{	my ($self, $context) = @_;
+    my $value = $self->child->compute($context)
 		or return undef;
 
 	$value->prefix($self->operator, $context);
@@ -145,12 +145,12 @@ my %comparison = (
 sub _compare_ops { keys %comparison }
 
 sub compute($$)
-{	my ($self, $context, $expr) = @_;
+{	my ($self, $context) = @_;
 
-    my $left  = $self->left->compute($context, $expr)
+    my $left  = $self->left->compute($context)
 		or return undef;
 
-	my $right = $self->right->compute($context, $expr)
+	my $right = $self->right->compute($context)
 		or return undef;
 
 	# Comparison operators are all implemented via a space-ship, when available.
@@ -159,12 +159,12 @@ sub compute($$)
 	my $op = $self->operator;
 	if(my $rewrite = $comparison{$op})
 	{	my ($spaceship, $compare) = @$rewrite;
-		if(my $result = $left->infix($spaceship, $right, $context, $expr))
+		if(my $result = $left->infix($spaceship, $right, $context))
 		{	return MF::BOOLEAN->new(undef, $compare->($result->value));
 		}
 	}
 
-	$left->infix($op, $right, $context, $expr);
+	$left->infix($op, $right, $context);
 }
 
 
@@ -183,12 +183,12 @@ sub then()      { $_[0][2] }
 sub else()      { $_[0][3] }
 
 sub compute($$)
-{	my ($self, $context, $expr) = @_;
+{	my ($self, $context) = @_;
 
-    my $cond  = $self->condition->compute($context, $expr)
+    my $cond  = $self->condition->compute($context)
 		or return undef;
 
-	($cond->value ? $self->then : $self->else)->compute($context, $expr)
+	($cond->value ? $self->then : $self->else)->compute($context)
 }
 
 #-------------------
@@ -201,7 +201,7 @@ use base 'Math::Formula::Token';
 sub seqnr() { $_[0][0] }
 
 sub compute($$)
-{	my ($self, $context, $expr) = @_;
+{	my ($self, $context) = @_;
 	my $v = $context->capture($self->seqnr -1);
 	defined $v ? MF::STRING->new(undef, $v) : undef;
 }

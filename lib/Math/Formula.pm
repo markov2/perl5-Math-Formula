@@ -349,7 +349,7 @@ sub evaluate($)
 
 	my $result
 	  = ref $expr eq 'CODE' ? $self->toType($expr->($context, $self, %args))
-	  : ! blessed $expr     ? $self->tree($expr)->compute($context, $self)
+	  : ! blessed $expr     ? $self->tree($expr)->compute($context)
 	  : $expr->isa('Math::Formula::Type') ? $expr
 	  : panic;
 
