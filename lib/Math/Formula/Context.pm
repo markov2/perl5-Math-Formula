@@ -24,7 +24,7 @@ Math::Formula::Context - Calculation context, pile of expressions
 =chapter DESCRIPTION
 
 Like in web template systems, evaluation of expressions can be effected by the
-computation context which contains values.  Thise Context object manages these
+computation context which contains values.  This Context object manages these
 values; in this case, it runs the right expressions.
 
 =chapter METHODS
@@ -197,7 +197,7 @@ Add a single formula to this context.  The formula is returned.
 
 =example of addFormula
 
-Only the 3rd and 4th line of the examples below are affected by C<new(lead_expresssions)>:
+Only the 3rd and 4th line of the examples below are affected by C<new(lead_expressions)>:
 only in those cases it is unclear whether we speak about a STRING or an expression.  But,
 inconveniently, those are popular choices.
 
@@ -276,7 +276,7 @@ sub fragment($) { $_[0]->{MFC_frags}{$_[1]} }
 =section Runtime
 
 =method evaluate $name, %options
-Evaluate the expresion with the $name.  Returns a types object, or C<undef>
+Evaluate the expression with the $name.  Returns a types object, or C<undef>
 when not found.  The %options are passed to M<Math::Formula::evaluate()>.
 =cut
 
@@ -304,7 +304,7 @@ sub evaluate($$%)
 }
 
 =method run $expression, %options
-Singleshot an expression: the expression will be run in this context but
+Single-shot an expression: the expression will be run in this context but
 not get a name.  A temporary M<Math::Formula> object is created and
 later destroyed.  The %options are passed to M<Math::Formula::evaluate()>.
 
@@ -347,7 +347,7 @@ sub setCaptures($) { $_[0]{MFC_capts} = $_[1] }
 sub _captures() { $_[0]{MFC_capts} }
 
 =method capture $index
-Returns the value of a capture as STRING, when it exists.  The C<$index> starts at
+Returns the value of a capture, when it exists.  The C<$index> starts at
 zero, where the capture indicators start at one.
 =cut
 
@@ -364,37 +364,45 @@ can contain any kind of text, and hence may look totally equivalent
 to the other things.  Therefore, you will need some kind of encoding,
 which can be selected with M<new(lead_expressions)>.
 
-When C<lead_expressions> is the empty string (default), then expressions have no
-leading flag, so the following can be used:
+I<The default behavior>: when C<lead_expressions> is the empty string,
+then expressions have no leading flag, so the following can be used:
 
    text_field => \"string"
    text_field => \'string'
    text_field => \$string
    text_field => '"string"'
    text_field => "'string'"
+   text_field => "'$string'"   <-- unsafe quotes?
    expr_field => '1 + 2 * 3'
 
-But C<lead_expressions> can be anything.  For instance, easy to remember is C<=>. In
-that case, the added data can look like
+I<Alternatively>, M<new(lead_expressions) can be anything.  For instance,
+easy to remember is C<=>. In that case, the added data can look like
 
    text_field => \"string"
    text_field => \'string'
    text_field => \$string
    text_field => "string"
    text_field => 'string'
-   text_field => $string       <-- unsafe?
+   text_field => $string       <-- unsafe quotes?
    expr_field => '= 1 + 2 * 3'
 
 Of course, this introduces the security risk in the C<$string> case, which might
-carry a C<=> by accident.  So: although useable, refrain from using that form
+carry a C<=> by accident.  So: although usable, refrain from using that form
 unless you are really, really sure this can never be confused.
 
 Other suggestions for C<lead_expressions> are C<+> or C<expr: >.  Any constant string
 will do.
 
+I<The third solution> for this problem, is that your application exactly knows
+which fields are formula, and which fields are plain strings.  For instance, my
+own application is XML based.  I have defined
+
+ <let name="some-field1" string="string content" />
+ <let name="some-field2" be="expression content" />
+
 =section Creating an interface to an object (fragment)
 
-For safity reasons, the formulars can not directly call methods on data
+For safety reasons, the formulas can not directly call methods on data
 objects, but need to use a well defined interface which hides the internals
 of your program.  Some (Perl) people call this "inside-out objects".
 
@@ -414,13 +422,16 @@ The way to create an interface looks: (first the long version)
   }
 
   my $name      = $object->name;  # f.i. "file"
-  my $interface = Math::Formala::Context->new(name => $name);
+  my $interface = Math::Formula::Context->new(name => $name);
   $interface->addAttribute(size => \&handle_size);
   $context->addFragment($interface);
 
   my $expr   = Math::Formula->new(allocate => '#file.size * 10k');
   my $result = $expr->evaluate($context, expect => 'MF::INTEGER');
   print $result->value;
+
+  $context->add($expr);
+  $context->value($expr);  # simpler
 
 Of course, there are various simplifications possible, when the calculations
 are not too complex:
@@ -430,10 +441,12 @@ are not too complex:
     name     => 'file',
     formulas => {
       name     => \$filename,
-      size     => sub { MF::INTEGER->new(-s $filename) },
       path     => sub { \File::Spec->catfile($dir, $filename) },
-      is_image => 'name =~ "*.{jpg,png,gif}"',
+      is_image => 'name like "*.{jpg,png,gif}"',
       π        => MF::FLOAT->new(undef, 3.14),    # constant
+
+      # $_[0] = $context
+      size     => sub { -s $_[0]->value('path') },
     });
   $context->addFragment($fragment);
   $context->addFormula(allocate => '#file.size * 10k');

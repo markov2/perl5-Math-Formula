@@ -43,8 +43,8 @@ to the main code.
 =section Actions
 
 =method save $context, %args
-Serialize the $context to INI files, as storage or to be editted by hand.
-This is a usefull method when default configuration templates need to be generated.
+Serialize the $context to INI files, as storage or to be edited by hand.
+This is a useful method when default configuration templates need to be generated.
 
 =option filename STRING
 =default filename C<< $context->name .ini >>
@@ -107,7 +107,7 @@ sub _serialize($$)
 }
 
 =method load $name, %options
-Load a M<Math::Formula::Context> for an ini file.
+Load a M<Math::Formula::Context> for an INI file.
 
 =option  filename FILENAME
 =default filename <directory/$name.ini>

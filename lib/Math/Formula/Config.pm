@@ -22,14 +22,10 @@ sets of expressions to and from a program.
 
 The following serialization formats are supported:
 =over 4
-=item * JSON M<Math::Formula::Config::JSON> (save)
-=item * YAML M<Math::Formula::Config::YAML> (save)
-=item * INI  M<Math::Formula::Config::INI>  (save and load)
+=item * JSON M<Math::Formula::Config::JSON>
+=item * YAML M<Math::Formula::Config::YAML>
+=item * INI  M<Math::Formula::Config::INI>
 =back
-
-At the moment, B<loading is not generally supported>: it produces only satisfactory
-results for INI, but improvements are under way.  That implementation will
-certainly impact the output format.  The current version is ment for studying.
 
 =chapter METHODS
 
@@ -78,15 +74,15 @@ sub path_for($$)
 =section Actions
 
 =method save $context, %args
-Serialize the $context into a file as storage or to be editted by hand.
-This is a usefull method when default configuration templates need to
+Serialize the $context into a file as storage or to be edited by hand.
+This is a useful method when default configuration templates need to
 be generated.
 =cut
 
 sub save($%) { die "Save under construction" }
 
 =method load $name, %options
-Load a M<Math::Formula::Context> for an ini file.
+Load a M<Math::Formula::Context> for an INI file.
 
 =option  filename FILENAME
 =default filename <directory/$name.ini>

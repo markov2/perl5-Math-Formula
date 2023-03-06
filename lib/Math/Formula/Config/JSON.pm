@@ -18,7 +18,7 @@ Math::Formula::Config::JSON - load/save formulas to file
 =chapter SYNOPSIS
 
   my $context = Math::Formula::Content->new(name => 'test');
-  my $config = Math::Formula::Config::INI->JSON(directory => $dir);
+  my $config = Math::Formula::Config::JSON->new(directory => $dir);
 
   $config->save($context);
   my $context = $config->load('test');
@@ -40,8 +40,8 @@ to the main code.
 =section Actions
 
 =method save $context, %args
-Serialize the $context to JSON files, as storage or to be editted by hand.
-This is a usefull method when default configuration templates need to be generated.
+Serialize the $context to JSON files, as storage or to be edited by hand.
+This is a useful method when default configuration templates need to be generated.
 
 =option filename STRING
 =default filename C<< $context->name .json>
@@ -106,10 +106,10 @@ sub _serialize($$)
 
 
 =method load $name, %options
-Load a M<Math::Formula::Context> for a yml file.
+Load a M<Math::Formula::Context> for a file in JSON serialization.
 
 =option  filename FILENAME
-=default filename <directory/$name.yml>
+=default filename <directory/$name.json>
 
 =cut
 
@@ -162,7 +162,7 @@ sub _unpack($$)
 #----------------------
 =chapter DETAILS
 
-JSON seems to be everyone's favorit serialization syntax, nowadays.  It natively
+JSON seems to be everyone's favorite serialization syntax, nowadays.  It natively
 supports integers, floats, booleans, and strings.  Formulas get a leading '='
 (not yet configurable).
 

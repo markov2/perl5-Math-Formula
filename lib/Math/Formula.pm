@@ -25,72 +25,34 @@ Math::Formula - expressions on steroids
   my $formula = Math::Formula->new(π => 3.14);
   my $size    = $formula->evaluate;
 
+  # For a bit more complex formulas, you need a context object.
   my $context = Math::Formula::Context->new(name => 'example');
   $context->add( { size => '42k', header => '324', total => 'size + header' });
   my $total   = $context->value('total');
 
+  # To build connectors to objects in your program, interfaces.
+  # See Math::Formula::Context.
   my $formula = Math::Formula->new(size => \&own_sub, %options);
 
 =chapter DESCRIPTION
 
 B<WARNING:> This is not a programming language: it lacks control
 structures, like loops and blocks.  This module can be used
-to get (very) flexible configuration (files) for your program.
-See M<Math::Formula::Context> and M<Math::Formula::Config>.
+to offer (very) flexible configuration (files) for users of your
+application. See M<Math::Formula::Context> and M<Math::Formula::Config>.
 
 B<What makes Math::Formula special?> Zillions of expression evaluators
 have been written in the past.  The application where this module was
-written for has special needs which were not served by them.
+written for, has special needs which were not served by them.
 This expression evaluator can do things which are usually hidden behind
 library calls.
 
-For instance, there are many types which can used in your configuration
-lines to calculate directly (examples far down on this page)
-
-  true and false               # real booleans
-  "abc"  'abc'                 # the usual strings, WARNING: read below
-  7  89k  5Mibi                # integers with multiplier support
-  =~ "c$"                      # regular expression matching
-  like "*c"                    # pattern matching
-  2023-02-18T01:28:12+0300     # date-times
-  2023-02-18+0100              # dates
-  01:18:12                     # times
-  -0600                        # time-zone
-  P2Y3DT2H                     # duration
-  name                         # outcome of other expressions
-  #unit.owner                  # fragments (nested context, namespaces)
-  "abc".length                 # attributes
-  (1 + 2) * 3                  # parenthesis
-
-WARNING: in your code, all these above are place between quotes.
-This makes it inconvenient to use strings, which are also between
-quotes.  So: strings should stand-out from expressions.  By default, use this:
-
-  "\"string\""   '"string"'   "'$string'"   # $string with escaped quotes!
-  \"string"       \'string'   \$string      # or, use a SCALAR reference
-
-When you use a M<Math::Formula::Context> (preferred), you can select your
-own solution via M<Math::Formula::Context::new(lead_expressions)>.
-
-Your expressions can look like this:
-
-  my_age   => '(#system.now.date - 1966-05-04).years',
-  is_adult => 'my_age >= 18',
-
-Expressions can refer to values computed by other expressions.  Also,
-external objects can maintain libraries of formulas or produce compatible
-data.
-
 B<Why do I need it?> I<My> application has many kinds of configurable
-rules.  Those rules often use times and durations in it, to organize
-processing activities.  Each line in my configuration can now be a
-smart expression.  Declarative programming.
+rules, from different sources.  Those rules often use times and durations
+in them, to organize processing activities.  Each line in my configuration
+can now be a smart expression.  Declarative programming.
 
-=section Plans
-
-=over 4
-=item * parameterized formulas would be nice
-=back
+B<Interested?> Read more in the L</"DETAILS"> section below.
 
 =cut
 
@@ -104,7 +66,7 @@ smart expression.  Declarative programming.
 The expression needs a $name.  Expressions can refer to each other via this name.
 
 The $expression is usually a (utf8) string, which will get parsed and
-evaluated on demand.  The $expresion may also be a prepared node (any
+evaluated on demand.  The $expression may also be a prepared node (any
 <Math::Formula::Type> object).
 
 As special hook, you may also provide a CODE as $expression.  This will
@@ -113,7 +75,7 @@ be called as
   $expression->($context, $this_formula, %options);
 
 Optimally, the expression returns any M<Math::Formula::Type> object.  Otherwise,
-auto-detection of the computed rsult kicks in.  The %options are passed to
+auto-detection of the computed result kicks in.  The %options are passed to
 M<evaluate()>  More details below in L<Math::Formula::Context/"CODE as expression">.
 
 =option  returns $type
@@ -158,7 +120,7 @@ Returns the expression, which was given at creation. Hence, it can be a string
 to be evaluated, a type-object, or a CODE reference.
 
 =method returns
-Set when the expression promisses to produce a certain type.
+Set when the expression promises to produce a certain type.
 =cut
 
 sub name()       { $_[0]->{MSBE_name} }
@@ -333,7 +295,7 @@ sub _build_ast($$)
 
 =method evaluate [ $context, %options ]
 Calculate the value for this expression given the $context.  The Context groups the expressions
-together so they can refer to eachother.  When the expression does not contain Names, than you
+together so they can refer to each other.  When the expression does not contain Names, than you
 may go without context.
 
 =option  expect $type
@@ -402,14 +364,71 @@ sub toType($)
 #--------------------------
 =chapter DETAILS
 
-=section Formulas
+This module handles formulas.  Someone (your application user) gets more power
+in configuring its settings.  Very simple example:
 
-=subsection explaining types
+  # In a back-up script, configured in JSON
+  "daily_backups"  : "/var/tmp/backups/daily",
+  "weekly_backups" : "/var/tmp/backups/weekly",
+  
+  # With Math::Formula::Config::JSON
+  "backup_dir"     : "/var/tmp/backups/",
+  "daily_backups"  : "= backup_dir ~ 'daily'",
+  "weekly_backups" : "= backup_dir ~ 'weekly'",
+
+The more configuration your application needs, the more useful this module
+gets.  Especially when you need to work with timestamps.
+
+=section Data-types
+
+Examples for all data-types which C<Math::Formula> supports:
+
+  true and false               # real booleans
+  "abc"  'abc'                 # the usual strings, WARNING: read below
+  7  89k  5Mibi                # integers with multiplier support
+  =~ "c$"                      # regular expression matching
+  like "*c"                    # pattern matching
+  2023-02-18T01:28:12+0300     # date-times
+  2023-02-18+0100              # dates
+  01:18:12                     # times
+  -0600                        # time-zone
+  P2Y3DT2H                     # duration
+  name                         # outcome of other expressions
+
+And constructs
+
+  (1 + 2) * -3                 # operations and parenthesis
+  "abc".length                 # attributes
+  #unit.owner                  # fragments (nested context, namespaces)
+
+B<Warning:> in your code, all these above are place between quotes.
+This makes it inconvenient to B<use strings>, which are also usually
+between quotes.  So: strings should stand-out from expressions.
+Use any of the following syntaxes:
+
+  "\"string\""   '"string"'    "'$string'"   # $string with escaped quotes!
+  \"string"       \'string'    \$string      # or, use a SCALAR reference
+
+When you use a M<Math::Formula::Context> (preferred), you can select your
+own solution via M<Math::Formula::Context::new(lead_expressions)>.  It is
+possible to configure that all strings get the normal quotes, and expressions
+start with C<=> (or any other leading string).
+
+Your expressions can look like this:
+
+  my_age   => '(#system.now.date - 1966-05-04).years',
+  is_adult => 'my_age >= 18',
+
+Expressions can refer to values computed by other expressions.  Also,
+external objects can maintain libraries of formulas or produce compatible
+data.
+
+=subsection Sets of formulas
 
 Let's start with a large group of related formulas, and the types they produce:
 
   birthday: 1966-04-05      # DATE
-  os_lib: #system           # external OBJECT
+  os_lib: #system           # other context is a FRAGMENT
   now: os_lib.now           # DATETIME 'now' is an attribute of system
   today: now.date           # DATE 'today' is an attribute of DATETIME
   alive: today - birthday   # DURATION
@@ -428,8 +447,8 @@ Or some backup configuration lines:
   backup_name: backup_dir ~ '/' ~ "backup-" ~ weekday ~ ".tgz"
 
 The application which uses this configuration, will run the expressions with
-the names has listed.  It may also provide some own formulas, fragments, and
-helper methods.
+the names as listed.  It may also provide some own formulas, fragments, and
+helper methods as features.
 
 =section Operators
 
@@ -437,7 +456,10 @@ As B<prefix> operator, you can use C<not>, C<->, C<+>, and C<exists>
 on applicable data types.  The C<#> (fragment) and C<.> (attributes)
 prefixes are weird cases: see M<Math::Formula::Context>.
 
-Operators work on explicit data types.
+Operators only work on specific data types, but some types will
+automatically convert.  For instance, all types can be cast into
+a string to support regular expression and pattern matching.
+
 Of course, you can use parenthesis for grouping.
 
 B<Prefix> operators always have the highest priority, and work right
@@ -445,17 +467,17 @@ to left (RTL) The B<infix> and B<ternary> operators have the following
 priorities: (from low to higher, each like with equivalent priority)
 
   LTR       ?:                             # if ? then : else
-  NOCHAIN	->                             # if-then, substitute
-  LTR       or   xor  //
-  LTR       and
-  NOCHAIN	<    >    <=   ==   !=   <=>   # numeric comparison
-  NOCHAIN	lt   gt   le   eq   ne   cmp   # string comparison
-  LTR       +    -    ~
-  LTR       *    /    %
+  NOCHAIN   ->                             # if-then, substitute
+  LTR       or   xor  //                   # (excl)or, defaults to
+  LTR       and                            # and
+  NOCHAIN   <    >    <=   ==   !=   <=>   # numeric comparison
+  NOCHAIN   lt   gt   le   eq   ne   cmp   # string comparison
+  LTR       +    -    ~                    # plus, minus, concat
+  LTR       *    /    %                    # mul, div, modulo
   NOCHAIN   =~   !~   like  unlike         # regexps and patterns
   LTR       #    .                         # fragments and attributes
 
-The first value is a constant representing associativety.  Either the constant
+The first value is a constant representing associativity.  Either the constant
 LTR (compute left to right), RTL (right to left), or NOCHAIN (non-stackable
 operator).
 
