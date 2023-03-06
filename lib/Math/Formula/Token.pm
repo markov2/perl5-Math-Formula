@@ -49,7 +49,7 @@ use constant {
 # "accidentally" is the same value as the M<token()> method produces.
 sub operator() { $_[0][0] }
 
-sub _compute
+sub compute
 {	my ($self, $context, $expr) = @_;
 	panic +(ref $self) . ' does not compute';
 }
@@ -61,6 +61,7 @@ my %table;
 	my @order = (
 #		[ LTR,     ',' ],
  		[ LTR,     '?', ':' ],        # ternary ?:
+		[ NOCHAIN, '->' ],
 		[ LTR,     qw/or xor/, '//' ],
 		[ LTR,     'and' ],
 		[ NOCHAIN, qw/ <=> < <= == != >= > / ],
@@ -102,9 +103,9 @@ use base 'MF::OPERATOR';
 # method child(): Returns the AST where this operator works on.
 sub child() { $_[0][1] }
 
-sub _compute($$)
+sub compute($$)
 {	my ($self, $context, $expr) = @_;
-    my $value = $self->child->_compute($context, $expr)
+    my $value = $self->child->compute($context, $expr)
 		or return undef;
 
 	$value->prefix($self->operator, $context);
@@ -143,13 +144,13 @@ my %comparison = (
 
 sub _compare_ops { keys %comparison }
 
-sub _compute($$)
+sub compute($$)
 {	my ($self, $context, $expr) = @_;
 
-    my $left  = $self->left->_compute($context, $expr)
+    my $left  = $self->left->compute($context, $expr)
 		or return undef;
 
-	my $right = $self->right->_compute($context, $expr)
+	my $right = $self->right->compute($context, $expr)
 		or return undef;
 
 	# Comparison operators are all implemented via a space-ship, when available.
@@ -181,13 +182,28 @@ sub condition() { $_[0][1] }
 sub then()      { $_[0][2] }
 sub else()      { $_[0][3] }
 
-sub _compute($$)
+sub compute($$)
 {	my ($self, $context, $expr) = @_;
 
-    my $cond  = $self->condition->_compute($context, $expr)
+    my $cond  = $self->condition->compute($context, $expr)
 		or return undef;
 
-	($cond->value ? $self->then : $self->else)->_compute($context, $expr)
+	($cond->value ? $self->then : $self->else)->compute($context, $expr)
+}
+
+#-------------------
+# When used, this returns a MF::STRING taken from the captures in the context.
+
+package
+	MF::CAPTURE;
+use base 'Math::Formula::Token';
+
+sub seqnr() { $_[0][0] }
+
+sub compute($$)
+{	my ($self, $context, $expr) = @_;
+	my $v = $context->capture($self->seqnr -1);
+	defined $v ? MF::STRING->new(undef, $v) : undef;
 }
 
 1;

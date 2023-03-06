@@ -90,7 +90,6 @@ smart expression.  Declarative programming.
 
 =over 4
 =item * parameterized formulas would be nice
-=item * loading and saving contexts in INI, YAML, and JSON format
 =back
 
 =cut
@@ -199,7 +198,7 @@ my $match_dt    = MF::DATETIME->_match;
 my $match_dur   = MF::DURATION->_match;
 
 my $match_op    = join '|',
-	qw{ // }, '[?*\/+\-#~.%]',
+	qw{ // -> }, '[?*\/+\-#~.%]',
 	qw{ =~ !~ <=> <= >= == != < > },  # order is important
 	qw{ :(?![0-9][0-9]) (?<![0-9][0-9]): },
 	( map "$_\\b", qw/ and or not xor exists like unlike cmp lt le eq ne ge gt/
@@ -231,6 +230,7 @@ sub _tokenize($)
 		| ( $match_int )	(?{ push @t, MF::INTEGER->new($+) })
 		| \(				(?{ push @t, MF::PARENS->new('(', ++$parens_open) })
 		| \)				(?{ push @t, MF::PARENS->new(')', $parens_open--) })
+		| \$ ([1-9][0-9]*)	(?{ push @t, MF::CAPTURE->new($+) })
 		| $
 		| (.+)				(?{ error __x"expression '{name}', failed at '{where}'",
 								name => $self->name, where => $+ })
@@ -349,7 +349,7 @@ sub evaluate($)
 
 	my $result
 	  = ref $expr eq 'CODE' ? $self->toType($expr->($context, $self, %args))
-	  : ! blessed $expr     ? $self->tree($expr)->_compute($context, $self)
+	  : ! blessed $expr     ? $self->tree($expr)->compute($context, $self)
 	  : $expr->isa('Math::Formula::Type') ? $expr
 	  : panic;
 
@@ -445,13 +445,14 @@ to left (RTL) The B<infix> and B<ternary> operators have the following
 priorities: (from low to higher, each like with equivalent priority)
 
   LTR       ?:                             # if ? then : else
+  NOCHAIN	->                             # if-then, substitute
   LTR       or   xor  //
   LTR       and
   NOCHAIN	<    >    <=   ==   !=   <=>   # numeric comparison
   NOCHAIN	lt   gt   le   eq   ne   cmp   # string comparison
   LTR       +    -    ~
   LTR       *    /    %
-  LTR       =~   !~   like  unlike         # regexps and patterns
+  NOCHAIN   =~   !~   like  unlike         # regexps and patterns
   LTR       #    .                         # fragments and attributes
 
 The first value is a constant representing associativety.  Either the constant

@@ -52,12 +52,12 @@ The following methods and features are supported for any Type defined on this pa
 
 All types can be converted into a string:
 
-  "a" ~ 2          -> STRING "a2"
+  "a" ~ 2          => STRING "a2"
 
 All types may provide B<attributes> (calls) for objects of that type.  Those
 get inherited (of course).  For instance:
 
-   02:03:04.hour   -> INTEGER 2
+   02:03:04.hour   => INTEGER 2
 
 =method cast $type
 Type-convert a typed object into an object with a different type.  Sometimes, the 
@@ -86,7 +86,7 @@ the value.
 
 # Returns a value as result of a calculation.
 # nothing to compute for most types: simply itself
-sub _compute { $_[0] }
+sub compute { $_[0] }
 
 =method value
 Where M<token()> returns a string representation of the instance, the
@@ -142,16 +142,30 @@ Represents a truth value, either C<true> or C<false>.
 Booleans implement the prefix operator "C<+>", and infix operators 'C<and>',
 'C<or>', and 'C<xor>'.
 
+The weird infix operator C<< -> >> implements an 'if-then', which can also be
+used as substitute.  When the left-side of the arrow is true, then the right
+side is returned.
+
+When left of the C<< -> >> is a possive regular expression match C<< =~ >>,
+then the right side may can be a complex expression which may contains C<$1>,
+C<2> etc.  The represent the captured values in the regexp.
+
 =examples for booleans
 
   true    false     # the only two values
   0                 # will be cast to false in boolean expressions
   42                # any other value is true, in boolean expressions
 
-  not true        -> BOOLEAN false
-  true and false  -> BOOLEAN false
-  true  or false  -> BOOLEAN true
-  true xor false  -> BOOLEAN true
+  not true               => BOOLEAN false
+  true and false         => BOOLEAN false
+  true  or false         => BOOLEAN true
+  true xor false         => BOOLEAN true
+
+  true  -> something        => something
+  false -> something        => undef     # rule fails
+  "abcd" =~ "^(.*)c" -> $1  => STRING "ab"
+
+  filename =~ "\.([^.]+)$" -> "extension is " ~ $1
 
 =cut
 
@@ -181,12 +195,19 @@ sub infix($$$)
 	my ($op, $right, $context) = @_;
 
 	if(my $r = $right->isa('MF::BOOLEAN') ? $right : $right->cast('MF::BOOLEAN', $context))
-	{	my $v = $op eq 'and' ? ($self->value and $r->value)
+	{	# boolean values are 0 or 1, never undef
+		my $v = $op eq 'and' ? ($self->value and $r->value)
 	  		  : $op eq  'or' ? ($self->value  or $r->value)
 	  		  : $op eq 'xor' ? ($self->value xor $r->value)
 	  		  : undef;
 
 		return MF::BOOLEAN->new(undef, $v) if defined $v;
+	}
+	elsif($op eq '->')
+	{   $self->value or return undef;   # case false
+		my $result = $right->compute($context);
+		$context->setCaptures([]);      # do not leak captures
+		return $result;
 	}
 
 	$self->SUPER::infix(@_);
@@ -235,18 +256,18 @@ See also M<Math::Formula::Context::new(lead_expressions)>, for a different solut
 
 String operations:
 
-  "a" + 'b'           -> STRING  "ab"
-  "a" =~ "regexp"     -> BOOLEAN, see MF::REGEXP
-  "a" like "pattern"  -> BOOLEAN, see MF::PATTERN
+  "a" + 'b'           => STRING  "ab"
+  "a" =~ "regexp"     => BOOLEAN, see MF::REGEXP
+  "a" like "pattern"  => BOOLEAN, see MF::PATTERN
 
-  "a" gt "b"          -> BOOLEAN
-  "a" cmp "b"         -> INTEGER -1, 0, 1
+  "a" gt "b"          => BOOLEAN
+  "a" cmp "b"         => INTEGER -1, 0, 1
 
 Attributes:
 
-   "abc".length       -> INTEGER  3
-   "".is_empty        -> BOOLEAN true   # only white-space
-   "ABC".lower        -> STRING "abc", lower-case using utf8 folding
+   "abc".length       => INTEGER  3
+   "".is_empty        => BOOLEAN true   # only white-space
+   "ABC".lower        => STRING "abc", lower-case using utf8 folding
 =cut
 
 package
@@ -289,11 +310,18 @@ sub infix($$$)
 	{	my $r = $right->isa('MF::STRING') ? $right : $right->cast('MF::STRING', $context);
 		return MF::STRING->new(undef, $self->value . $r->value) if $r;
 	}
-	elsif($op eq '=~' || $op eq '!~')
+	elsif($op eq '=~')
+	{	if(my $r = $right->isa('MF::REGEXP') ? $right : $right->cast('MF::REGEXP', $context))
+		{	if(my @captures = $self->value =~ $r->regexp)
+			{	$context->setCaptures(\@captures);
+				return MF::BOOLEAN->new(undef, 1);
+			}
+			return MF::BOOLEAN->new(undef, 0);
+		}
+	}
+	elsif($op eq '!~')
 	{	my $r = $right->isa('MF::REGEXP') ? $right : $right->cast('MF::REGEXP', $context);
-		my $v = ! $r ? undef
-			  : $op eq '=~' ? $self->value =~ $r->regexp : $self->value !~ $r->regexp;
-		return MF::BOOLEAN->new(undef, $v) if $r;
+		return MF::BOOLEAN->new(undef, $self->value !~ $r->regexp) if $r;
 	}
 	elsif($op eq 'like' || $op eq 'unlike')
 	{	# When expr is CODE, it may produce a qr// instead of a pattern.
@@ -353,21 +381,21 @@ with floats.
   -12           # negatives
   1_234_567     # _ on the thousands, more readible
 
-  + 2          -> INTEGER   2      # prefix op
+  + 2          => INTEGER   2      # prefix op
   - 2          -> INTEGER   -2     # prefix op
   - -2         -> INTEGER   2      # prefix op, negative int
   
-  1 + 2        -> INTEGER   3      # infix op
+  1 + 2        => INTEGER   3      # infix op
   5 - 9        -> INTEGER   -4     # infix op
-  3 * 4        -> INTEGER   12
-  12 % 5       -> INTEGER   2
-  12 / 5       -> FLOAT     2.4
+  3 * 4        => INTEGER   12
+  12 % 5       => INTEGER   2
+  12 / 5       => FLOAT     2.4
 
-  1 < 2        -> BOOLEAN   true
-  1 <=> 2      -> INTEGER   -1     # -1, 0, 1
+  1 < 2        => BOOLEAN   true
+  1 <=> 2      => INTEGER   -1     # -1, 0, 1
 
-  not 0        -> BOOLEAN   true
-  not 42       -> BOOLEAN   false
+  not 0        => BOOLEAN   true
+  not 42       => BOOLEAN   false
 
 Attributes
 
@@ -470,8 +498,8 @@ integers.
   -12.345
 
   3.14 / 4
-  2.7 < π        -> BOOLEAN true
-  2.12 <=> 4.89  -> INTEGER -1    # -1, 0, 1
+  2.7 < π        => BOOLEAN true
+  2.12 <=> 4.89  => INTEGER -1    # -1, 0, 1
   
 =cut
 
@@ -567,16 +595,16 @@ within the specified date range (from 00:00:00 in the morning upto 23:59:61 at n
 Attributes: (the date and time attributes combined)
 
   date = 2006-11-21T12:23:34.56+0110
-  dt.year     -> INTEGER  2006
-  dt.month    -> INTEGER  11
-  dt.day      -> INTEGER  21
-  dt.hour     -> INTEGER  12
-  dt.minute   -> INTEGER  23
-  dt.second   -> INTEGER  34
-  dt.fracsec  -> FLOAT    34.56
-  dt.timezone -> TIMEZONE +0110
-  dt.time     -> TIME     12:23:34.56
-  dt.date     -> DATE     2006-11-21+0110
+  dt.year     => INTEGER  2006
+  dt.month    => INTEGER  11
+  dt.day      => INTEGER  21
+  dt.hour     => INTEGER  12
+  dt.minute   => INTEGER  23
+  dt.second   => INTEGER  34
+  dt.fracsec  => FLOAT    34.56
+  dt.timezone => TIMEZONE +0110
+  dt.time     => TIME     12:23:34.56
+  dt.date     => DATE     2006-11-21+0110
 =cut
 
 package
@@ -700,10 +728,10 @@ in the same timezone, this will return false.
 Attributes:
 
   date = 2006-11-21+0700
-  date.year      -> INTEGER   2006
-  date.month     -> INTEGER   11
-  date.day       -> INTEGER   21
-  date.timezone  -> TIMEZONE  +0700
+  date.year      => INTEGER   2006
+  date.month     => INTEGER   11
+  date.day       => INTEGER   21
+  date.timezone  => TIMEZONE  +0700
 =cut
 
 package
@@ -829,21 +857,21 @@ the actual date:
   23:59:61      # with max leap seconds
   09:11:11.111  # precise time (upto nanoseconds)
 
-  12:00:34 + PT30M -> TIME 12:30:34   # end of lunch
+  12:00:34 + PT30M => TIME 12:30:34   # end of lunch
   12:00:34 - PT15M -> TIME 11:45:34   # round-up coworkers
-  23:40:00 + PT7H  -> TIME 06:40:00   # early rise
+  23:40:00 + PT7H  => TIME 06:40:00   # early rise
   07:00:00 - 23
 
-  18:00:00 ==  17:00:00 -> BOOLEAN
-  18:00:00 <=> 17:00:00 -> INTEGER
+  18:00:00 ==  17:00:00 => BOOLEAN
+  18:00:00 <=> 17:00:00 => INTEGER
 
 Attributes:
 
   time = 12:23:34.56
-  time.hour        -> INTEGER 12
-  time.minute      -> INTEGER 23
-  time.second      -> INTEGER 34
-  time.fracsec     -> FLOAT   34.56
+  time.hour        => INTEGER 12
+  time.minute      => INTEGER 23
+  time.second      => INTEGER 34
+  time.fracsec     => FLOAT   34.56
 
 =cut
 
@@ -943,8 +971,8 @@ When you subtract (C<->) one timezone from another, you will get a duration.
 Attributes:
 
   tz = -1236
-  tz.in_minutes    -> INTEGER -756
-  tz.in_seconds    -> INTEGER -45360
+  tz.in_minutes    => INTEGER -756
+  tz.in_seconds    => INTEGER -45360
 
 =cut
 
@@ -1040,18 +1068,18 @@ comparison.
   PT3H4M8.2S       # duration 3 hours, 4 minutes, just over 8 seconds
 
   - -P1Y           # prefix + and =
-  P3Y2M + P1YT3M5S  -> DURATION P4Y2MT3M5S
+  P3Y2M + P1YT3M5S  => DURATION P4Y2MT3M5S
   P1Y2MT3H5M - P3Y8MT5H13M14S -> DURATION -P2Y6MT2H8M14S
-  P1DT2H * 4        -> DURATION P4DT8H
-  4 * P1DT2H        -> DURATION P4DT8H
+  P1DT2H * 4        => DURATION P4DT8H
+  4 * P1DT2H        => DURATION P4DT8H
 
-  P1Y > P1M         -> BOOLEAN true
+  P1Y > P1M         => BOOLEAN true
   PT20M <=> PT19M   => INTEGER 1     # -1, 0, 1
 
 Attributes
 
-  P1Y.in_days       -> INTEGER  365  (4yrs will have extra day)
-  P1H.in_seconds    -> INTEGER  3600
+  P1Y.in_days       => INTEGER  365  (4yrs will have extra day)
+  P1H.in_seconds    => INTEGER  3600
 
 =cut
 
@@ -1167,8 +1195,8 @@ is taken.  This is often stacked with a constant default value at the end.
 
 Attributes on names
 
-  exists live     -> BOOLEAN    # does formula 'live' exist?
-  not exists live -> BOOLEAN
+  exists live     => BOOLEAN    # does formula 'live' exist?
+  not exists live => BOOLEAN
 
   live // dead // false         # pick first rule which exists
 
@@ -1236,9 +1264,7 @@ sub infix(@)
 	}
 
 	if($op eq '//')
-	{	return defined $context->formula($name)
-		  ? $context->evaluate($name)
-		  : $right->_compute($context);
+	{	return defined $context->formula($name) ? $context->evaluate($name) : $right->compute($context);
 	}
 
 	my $left = $context->evaluate($name);
@@ -1258,13 +1284,13 @@ Besides, it supports curly alternatives like C<*.{jpg,gif,png}>.
 
 =examples of patterns
 
-  "abc" like "b"     -> BOOLEAN false
-  "abc" like "*b*"   -> BOOLEAN false
-  "abc" like "*c"    -> BOOLEAN true
+  "abc" like "b"     => BOOLEAN false
+  "abc" like "*b*"   => BOOLEAN false
+  "abc" like "*c"    => BOOLEAN true
 
-  "abc" unlike "b"   -> BOOLEAN true
-  "abc" unlike "*b*" -> BOOLEAN true
-  "abc" unlike "*c"  -> BOOLEAN false
+  "abc" unlike "b"   => BOOLEAN true
+  "abc" unlike "*b*" => BOOLEAN true
+  "abc" unlike "*c"  => BOOLEAN false
 
 =cut
 
@@ -1321,10 +1347,10 @@ operators are detected, those will automatically be cast into a regexp.
 
 =examples of regular expressions
 
-  "abc" =~ "b"       -> BOOLEAN true
-  "abc" =~ "c$"      -> BOOLEAN true
-  "abc" !~ "b"       -> BOOLEAN false
-  "abc" !~ "c$"      -> BOOLEAN false
+  "abc" =~ "b"       => BOOLEAN true
+  "abc" =~ "c$"      => BOOLEAN true
+  "abc" !~ "b"       => BOOLEAN false
+  "abc" !~ "c$"      => BOOLEAN false
 =cut
 
 package

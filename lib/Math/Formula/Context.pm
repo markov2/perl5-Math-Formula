@@ -81,6 +81,7 @@ sub init($)
 	}
 
 	$self->{MFC_claims} = { };
+	$self->{MFC_capts}  = [ ];
 	$self;
 }
 
@@ -271,6 +272,9 @@ between contexts, which is done during execution.
 
 sub fragment($) { $_[0]->{MFC_frags}{$_[1]} }
 
+#-------------------
+=section Runtime
+
 =method evaluate $name, %options
 Evaluate the expresion with the $name.  Returns a types object, or C<undef>
 when not found.  The %options are passed to M<Math::Formula::evaluate()>.
@@ -331,6 +335,23 @@ sub value($@)
 	my $result = $self->run(@_);
 	$result ? $result->value : undef;
 }
+
+=method setCaptures \@strings
+See the boolean operator C<< -> >>, used in combination with regular expression
+match which captures fragments of a string.  On the right side of this arrow,
+you may use C<$1>, C<$2>, etc as strings representing parts of the matched
+expression.  This method sets those strings when the arrow operator is applied.
+=cut
+
+sub setCaptures($) { $_[0]{MFC_capts} = $_[1] }
+sub _captures() { $_[0]{MFC_capts} }
+
+=method capture $index
+Returns the value of a capture as STRING, when it exists.  The C<$index> starts at
+zero, where the capture indicators start at one.
+=cut
+
+sub capture($) { $_[0]->_captures->[$_[1]] }
 
 #--------------
 =chapter DETAILS
@@ -481,6 +502,7 @@ can be returned.  These are the types with examples for tokens and values:
   MF::DATETIME  '2023-...T09:...' DateTime-object
   MF::DATE      '2023-02-24+0100' DateTime-object
   MF::TIME      '09:12:24'        some HASH
+  MF::TIMEZONE  '+0200'           in seconds
   MF::DURATION  'P3Y2MT12M'       DateTime::Duration-object
   MF::NAME      'tac'             'tac'
   MF::PATTERN   '"*c"'            qr/^.*c$/ # like understands MF::REGEXP
