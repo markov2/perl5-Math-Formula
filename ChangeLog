@@ -4,6 +4,9 @@ All changes made by Mark Overmeer, unless explicitly stated otherwise.
 
 version 0.16:
 
+	Fixes:
+	- utf8 names are broken in 5.20, avoid the test [cpantesters]
+
 	Improvements:
 	- loads of doc-fixes
 
