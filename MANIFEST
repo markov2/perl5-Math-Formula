@@ -38,3 +38,5 @@ t/71lead.t
 t/80json.t
 t/81yaml.t
 t/82ini.t
+xt/98prereq.t
+xt/99pod.t

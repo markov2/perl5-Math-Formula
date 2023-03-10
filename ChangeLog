@@ -6,6 +6,7 @@ version 0.16:
 
 	Fixes:
 	- utf8 names are broken in 5.20, avoid the test [cpantesters]
+	- enforce minimal versions of optional prereqs [cpantesters]
 
 	Improvements:
 	- loads of doc-fixes

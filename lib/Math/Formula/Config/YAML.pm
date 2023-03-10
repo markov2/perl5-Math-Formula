@@ -6,7 +6,7 @@ use strict;
 
 use Log::Report 'math-formula';
 
-use YAML::XS 0.81;
+use YAML::XS ();
 use boolean ();
 use File::Slurper 'read_binary';
 
