@@ -2,7 +2,7 @@
 
 All changes made by Mark Overmeer, unless explicitly stated otherwise.
 
-version 0.16:
+version 0.16: Tue 14 Mar 09:32:45 CET 2023
 
 	Fixes:
 	- utf8 names are broken in 5.20, avoid the test [cpantesters]

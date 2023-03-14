@@ -375,7 +375,7 @@ then expressions have no leading flag, so the following can be used:
    text_field => "'$string'"   <-- unsafe quotes?
    expr_field => '1 + 2 * 3'
 
-I<Alternatively>, M<new(lead_expressions) can be anything.  For instance,
+I<Alternatively>, M<new(lead_expressions)> can be anything.  For instance,
 easy to remember is C<=>. In that case, the added data can look like
 
    text_field => \"string"

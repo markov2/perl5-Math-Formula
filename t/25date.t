@@ -86,7 +86,6 @@ foreach (@infix, @attrs)
 {	my ($result, $type, $rule, $warning) = @$_;
 
 	$expr->_test($rule);
-	my $eval;
 
 	#!!! this has lasting effect on this script: no output from Log::Report
 	dispatcher close => 'default' if $warning;
