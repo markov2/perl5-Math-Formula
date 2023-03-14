@@ -3,6 +3,8 @@ use ExtUtils::MakeMaker;
 
 use 5.016;
 
+my $version = '0.17';
+
 my %prereq = (
 	'Test::More'    => 0,
 	'Log::Report'   => 0,
@@ -39,7 +41,7 @@ unless($@)
 
 WriteMakefile (
 	NAME	 => 'Math::Formula',
-	VERSION      => '0.16',
+	VERSION      => $version,
 	PREREQ_PM    => \%prereq,
 	AUTHOR       => 'Mark Overmeer <markov@cpan.org>',
 	ABSTRACT     => 'Expressions on steroids',
