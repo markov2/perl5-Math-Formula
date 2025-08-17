@@ -1,16 +1,22 @@
+#oodist: *** DO NOT USE THIS VERSION FOR PRODUCTION ***
+#oodist: This file contains OODoc-style documentation which will get stripped
+#oodist: during its release in the distribution.  You can use this file for
+#oodist: testing, however the code of this development version may be broken!
+
 package Math::Formula::Config::JSON;
-use base 'Math::Formula::Config';
+use parent 'Math::Formula::Config';
 
 use warnings;
 use strict;
 
-use Log::Report 'math-formula';
-use Scalar::Util  'blessed';
-use File::Slurper 'read_binary';
+use Log::Report       qw/math-formula/;
+use Scalar::Util      qw/blessed/;
+use File::Slurper     qw/read_binary/;
 use Cpanel::JSON::XS  ();
 
 my $json = Cpanel::JSON::XS->new->pretty->utf8->canonical(1);
 
+#--------------------
 =chapter NAME
 
 Math::Formula::Config::JSON - load/save formulas to file
@@ -25,7 +31,7 @@ Math::Formula::Config::JSON - load/save formulas to file
 
 =chapter DESCRIPTION
 
-Save and load a M<Math::Formula::Context> to JSON files.
+Save and load a Math::Formula::Context to JSON files.
 
 You need to have installed B<Cpanel::JSON::XS>.  That module is not in the
 dependencies of this packages, because we do not want to add complications
@@ -36,7 +42,7 @@ to the main code.
 =section Constructors
 =cut
 
-#----------------------
+#--------------------
 =section Actions
 
 =method save $context, %args
@@ -46,6 +52,10 @@ This is a useful method when default configuration templates need to be generate
 =option filename STRING
 =default filename C<< $context->name .json>
 Save under a different filename than derived from the name of the context.
+
+=fault Trying to save context '$name' to $file: $!
+=fault Error on close while saving '$name' to $file: $!
+=warning cannot (yet) save CODE, skipped '$name'
 =cut
 
 sub save($%)
@@ -58,11 +68,11 @@ sub save($%)
 
 	my $fn = $self->path_for($args{filename} || "$name.json");
 	open my $fh, '>:raw', $fn
-		or fault __x"Trying to save context '{name}' to {fn}", name => $name, fn => $fn;
+		or fault __x"Trying to save context '{name}' to {file}", name => $name, file => $fn;
 
 	$fh->print($json->encode($tree));
 	$fh->close
-		or fault __x"Error on close while saving '{name}' to {fn}", name => $name, fn => $fn;
+		or fault __x"Error on close while saving '{name}' to {file}", name => $name, file => $fn;
 }
 
 sub _set($)
@@ -106,7 +116,7 @@ sub _serialize($$)
 
 
 =method load $name, %options
-Load a M<Math::Formula::Context> for a file in JSON serialization.
+Load a Math::Formula::Context for a file in JSON serialization.
 
 =option  filename FILENAME
 =default filename <directory/$name.json>
@@ -120,9 +130,8 @@ sub load($%)
 	my $tree     = $json->decode(read_binary $fn);
 	my $formulas = delete $tree->{formulas};
 
-	my $attrs = $self->_set_decode($tree);
-	Math::Formula::Context->new(name => $name,
-		%$attrs,
+	my $attrs    = $self->_set_decode($tree);
+	Math::Formula::Context->new(name => $name, %$attrs,
 		formulas => $self->_set_decode($formulas),
 	);
 }
@@ -159,7 +168,7 @@ sub _unpack($$)
 	: MF::STRING->new(undef, $encoded);
 }
 
-#----------------------
+#--------------------
 =chapter DETAILS
 
 JSON seems to be everyone's favorite serialization syntax, nowadays.  It natively
@@ -168,22 +177,22 @@ supports integers, floats, booleans, and strings.  Formulas get a leading '='
 
 =example
 {
-   "created" : "2023-02-28T16:30:27+0000",
-   "formulas" : {
-      "expr1" : "=1 + 2 * 3",
-      "expr2" : "=\"abc\".size + 3k; returns='MF::INTEGER'",
-      "fakes" : false,
-      "float" : 3.14,
-      "int" : 42,
-      "longer" : "abc def yes no",
-      "no_quotes" : "abc",
-      "some_truth" : true,
-      "string" : "true"
-   },
-   "mf_version" : "",
-   "name" : "test",
-   "updated" : "2023-02-28T16:30:27+0000",
-   "version" : 1.0
+  "created" : "2023-02-28T16:30:27+0000",
+  "formulas" : {
+     "expr1" : "=1 + 2 * 3",
+     "expr2" : "=\"abc\".size + 3k; returns='MF::INTEGER'",
+     "fakes" : false,
+     "float" : 3.14,
+     "int" : 42,
+     "longer" : "abc def yes no",
+     "no_quotes" : "abc",
+     "some_truth" : true,
+     "string" : "true"
+  },
+  "mf_version" : "",
+  "name" : "test",
+  "updated" : "2023-02-28T16:30:27+0000",
+  "version" : 1.0
 }
 =cut
 

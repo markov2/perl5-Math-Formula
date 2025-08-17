@@ -1,3 +1,7 @@
+#oodist: *** DO NOT USE THIS VERSION FOR PRODUCTION ***
+#oodist: This file contains OODoc-style documentation which will get stripped
+#oodist: during its release in the distribution.  You can use this file for
+#oodist: testing, however the code of this development version may be broken!
 
 package Math::Formula::Context;
 
@@ -7,6 +11,7 @@ use strict;
 use Log::Report 'math-formula';
 use Scalar::Util qw/blessed/;
 
+#--------------------
 =chapter NAME
 
 Math::Formula::Context - Calculation context, pile of expressions
@@ -44,6 +49,8 @@ Read section L</"Keep strings apart from expressions"> below.  When a blank stri
 you will need to put (single or double) quotes around your strings within your strings,
 or pass a SCALAR reference.  But that may be changed.
 
+=error unexpected value for '$name' in #$context
+=error context requires a name
 =cut
 
 sub new(%) { my $class = shift; (bless {}, $class)->init({@_}) }
@@ -67,9 +74,9 @@ sub init($)
 	my $now;
 	$self->{MFC_attrs} = {
 		ctx_name       => $node,
-		ctx_version    => $self->_default(version => 'MF::STRING',   $args->{version}, "1.00"),
-		ctx_created    => $self->_default(created => 'MF::DATETIME', $args->{created}, $now = DateTime->now),
-		ctx_updated    => $self->_default(updated => 'MF::DATETIME', $args->{updated}, $now //= DateTime->now),
+		ctx_version    => $self->_default(version => 'MF::STRING',    $args->{version}, "1.00"),
+		ctx_created    => $self->_default(created => 'MF::DATETIME',  $args->{created}, $now = DateTime->now),
+		ctx_updated    => $self->_default(updated => 'MF::DATETIME',  $args->{updated}, $now //= DateTime->now),
 		ctx_mf_version => $self->_default(mf_version => 'MF::STRING', $args->{mf_version}, $Math::Formula::VERSION),
 	};
 
@@ -94,7 +101,7 @@ sub _index()
 	  };
 }
 
-#--------------
+#--------------------
 =section Attributes
 
 =method name
@@ -112,7 +119,7 @@ be sure to pass strings as references.
 sub name             { $_[0]->{MFC_name} }
 sub lead_expressions { $_[0]->{MFC_lead} }
 
-#--------------
+#--------------------
 =section Fragment (this context) attributes
 
 Basic data types usually have attributes (string C<length>), which operator on the type
@@ -129,7 +136,7 @@ The following attributes are currently defined:
   ctx_mf_version  MF::STRING    Math::Formula version, useful for read/save
 
 =method attribute $name
-Returns the M<Math::Formula> object for the attribute $name.
+Returns the Math::Formula object for the attribute $name.
 =cut
 
 sub attribute($)
@@ -138,7 +145,7 @@ sub attribute($)
 	Math::Formula->new($name => $def);
 }
 
-#--------------
+#--------------------
 =section Formula and Fragment management
 
 =method add (@formulas|@fragments|\%configs)-LIST
@@ -155,10 +162,10 @@ objects, or a HASH with name to formula configurations.
 =examples:
   $context->add(wakeup => '07:00:00', returns => 'MF::TIME');
   $context->add(fruit  => \'apple', returns => 'MF::TIME');
-  
+
   my $form = Math::Formula->new(wakeup => '07:00:00', returns => 'MF::TIME');
   $context->add($form, @more_forms, @fragments, @hashes);
-  
+
   my %library = (
     breakfast => 'wakeup + P2H',
 	to_work   => 'PT10M',    # mind the 'T': minutes not months
@@ -214,6 +221,8 @@ inconveniently, those are popular choices.
   $context->addFormula(wakeup => sub { '07:00:00' }, returns => 'MF::TIME' ]);
   $context->addFormula(wakeup => MF::TIME->new('07:00:00'));
   $context->addFormula(wakeup => \'early');
+
+=error formula declaration '$name' not understood
 =cut
 
 sub addFormula(@)
@@ -253,7 +262,7 @@ sub addFormula(@)
 }
 
 =method formula $name
-Returns the M<Math::Formula> object with this specified name.
+Returns the Math::Formula object with this specified name.
 =cut
 
 sub formula($) { $_[0]->{MFC_forms}{$_[1]} }
@@ -276,12 +285,15 @@ between contexts, which is done during execution.
 
 sub fragment($) { $_[0]->{MFC_frags}{$_[1]} }
 
-#-------------------
+#--------------------
 =section Runtime
 
 =method evaluate $name, %options
-Evaluate the expression with the $name.  Returns a types object, or C<undef>
+Evaluate the expression with the $name.  Returns a types object, or undef
 when not found.  The %options are passed to M<Math::Formula::evaluate()>.
+
+=warning no formula '$name' in $context
+=error recursion in expression '$name' at $context
 =cut
 
 sub evaluate($$%)
@@ -298,8 +310,7 @@ sub evaluate($$%)
 
 	my $claims = $self->{MFC_claims};
 	! $claims->{$name}++
-		or error __x"recursion in expression '{name}' at {context}",
-			name => $name, context => $self->name;
+		or error __x"recursion in expression '{name}' at {context}", name => $name, context => $self->name;
 
 	my $result = $form->evaluate($self, @_);
 
@@ -309,7 +320,7 @@ sub evaluate($$%)
 
 =method run $expression, %options
 Single-shot an expression: the expression will be run in this context but
-not get a name.  A temporary M<Math::Formula> object is created and
+not get a name.  A temporary Math::Formula object is created and
 later destroyed.  The %options are passed to M<Math::Formula::evaluate()>.
 
 =option  name $name
@@ -351,13 +362,13 @@ sub setCaptures($) { $_[0]{MFC_capts} = $_[1] }
 sub _captures() { $_[0]{MFC_capts} }
 
 =method capture $index
-Returns the value of a capture, when it exists.  The C<$index> starts at
+Returns the value of a capture, when it exists.  The $index starts at
 zero, where the capture indicators start at one.
 =cut
 
 sub capture($) { $_[0]->_captures->[$_[1]] }
 
-#--------------
+#--------------------
 =chapter DETAILS
 
 =section Keep strings apart from expressions
@@ -371,24 +382,24 @@ which can be selected with M<new(lead_expressions)>.
 I<The default behavior>: when C<lead_expressions> is the empty string,
 then expressions have no leading flag, so the following can be used:
 
-   text_field => \"string"
-   text_field => \'string'
-   text_field => \$string
-   text_field => '"string"'
-   text_field => "'string'"
-   text_field => "'$string'"   <-- unsafe quotes?
-   expr_field => '1 + 2 * 3'
+  text_field => \"string"
+  text_field => \'string'
+  text_field => \$string
+  text_field => '"string"'
+  text_field => "'string'"
+  text_field => "'$string'"   <-- unsafe quotes?
+  expr_field => '1 + 2 * 3'
 
 I<Alternatively>, M<new(lead_expressions)> can be anything.  For instance,
 easy to remember is C<=>. In that case, the added data can look like
 
-   text_field => \"string"
-   text_field => \'string'
-   text_field => \$string
-   text_field => "string"
-   text_field => 'string'
-   text_field => $string       <-- unsafe quotes?
-   expr_field => '= 1 + 2 * 3'
+  text_field => \"string"
+  text_field => \'string'
+  text_field => \$string
+  text_field => "string"
+  text_field => 'string'
+  text_field => $string       <-- unsafe quotes?
+  expr_field => '= 1 + 2 * 3'
 
 Of course, this introduces the security risk in the C<$string> case, which might
 carry a C<=> by accident.  So: although usable, refrain from using that form
@@ -401,8 +412,8 @@ I<The third solution> for this problem, is that your application exactly knows
 which fields are formula, and which fields are plain strings.  For instance, my
 own application is XML based.  I have defined
 
- <let name="some-field1" string="string content" />
- <let name="some-field2" be="expression content" />
+  <let name="some-field1" string="string content" />
+  <let name="some-field2" be="expression content" />
 
 =section Creating an interface to an object (fragment)
 
@@ -484,7 +495,7 @@ This also works for formulas and attributes!
 
 It should be the common practice to use strings as expressions.  Those strings get
 tokenized and evaluated.  However, when you need calculations which are not offered
-by this module, or need connections to objects (see fragments in M<Math::Formula::Context>),
+by this module, or need connections to objects (see fragments in Math::Formula::Context),
 then you will need CODE references as expression.
 
 The CODE reference returns either an B<explicit type> or a guessed type.
@@ -508,7 +519,7 @@ Some examples of explicit return object generation:
   my $dt2 = $now->value;                    # returns $dt
   say $now->token;  -> 2032-02-24T10:00:15+0100
 
-See M<Math::Formula::Type> for detailed explanation for the types which
+See Math::Formula::Type for detailed explanation for the types which
 can be returned.  These are the types with examples for tokens and values:
 
   MF::BOOLEAN   'true'            1        # anything !=0 is true

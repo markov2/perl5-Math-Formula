@@ -1,7 +1,7 @@
-#!/usr/bin/env perl
-#
-# This code will be run incredabily fast, hence is tries to avoid copying etc.  It
-# is not always optimally readible when your Perl skills are poor.
+#oodist: *** DO NOT USE THIS VERSION FOR PRODUCTION ***
+#oodist: This file contains OODoc-style documentation which will get stripped
+#oodist: during its release in the distribution.  You can use this file for
+#oodist: testing, however the code of this development version may be broken!
 
 package Math::Formula;
 
@@ -10,11 +10,13 @@ use strict;
 use utf8;
 
 use Log::Report 'math-formula';
-use Scalar::Util qw/blessed/;
 
-use Math::Formula::Token;
-use Math::Formula::Type;
+use Math::Formula::Token ();
+use Math::Formula::Type  ();
 
+use Scalar::Util         qw/blessed/;
+
+#--------------------
 =chapter NAME
 
 Math::Formula - expressions on steroids
@@ -41,7 +43,7 @@ Math::Formula - expressions on steroids
 B<WARNING:> This is not a programming language: it lacks control
 structures, like loops and blocks.  This module can be used
 to offer (very) flexible configuration (files) for users of your
-application. See M<Math::Formula::Context> and M<Math::Formula::Config>.
+application. See Math::Formula::Context and Math::Formula::Config.
 
 B<What makes Math::Formula special?> Zillions of expression evaluators
 have been written in the past.  The application where this module was
@@ -58,7 +60,7 @@ B<Interested?> Read more in the L</"DETAILS"> section below.
 
 =cut
 
-#--------------------------
+#--------------------
 =chapter METHODS
 
 =section Constructors
@@ -76,12 +78,12 @@ be called as
 
   $expression->($context, $this_formula, %options);
 
-Optimally, the expression returns any M<Math::Formula::Type> object.  Otherwise,
+Optimally, the expression returns any Math::Formula::Type object.  Otherwise,
 auto-detection of the computed result kicks in.  The %options are passed to
 M<evaluate()>  More details below in L<Math::Formula::Context/"CODE as expression">.
 
 =option  returns $type
-=default returns C<undef>
+=default returns undef
 Enforce that the type produced by the calculation of this $type.  Otherwise, it may
 be different when other people are permitted to configure the formulas... people can
 make mistakes.
@@ -111,7 +113,7 @@ sub init($)
 	$self;
 }
 
-#--------------------------
+#--------------------
 =section Accessors
 
 =method name
@@ -133,6 +135,13 @@ sub returns()    { $_[0]->{MSBE_returns} }
 Returns the Abstract Syntax Tree of the $expression. Some of the types
 are only determined at the first run, for optimal laziness.  Used for
 debugging purposes only.
+
+=error expression '$name', failed at '$where'
+=error expression '$name', parenthesis do not match
+=error expression '$name', monadic '$op' not followed by anything useful
+=error expression '$name', expected infix operator but found '$type'
+=error expression '$name', infix operator '$op' requires right-hand argument
+=error expression '$name', expected ':' in '?:', but got '$token'
 =cut
 
 sub tree($)
@@ -177,7 +186,7 @@ sub _tokenize($)
 
 	$s =~ m/ ^
 	(?: \s*
-	  (?| \# (?: \s [^\n\r]+ | $ ) \
+	(?| \# (?: \s [^\n\r]+ | $ ) \
 		| ( true\b | false\b )	(?{ push @t, MF::BOOLEAN->new($+) })
 		| ( \" (?: \\\" | [^"] )* \" )
 							(?{ push @t, MF::STRING->new($+) })
@@ -198,7 +207,7 @@ sub _tokenize($)
 		| $
 		| (.+)				(?{ error __x"expression '{name}', failed at '{where}'",
 								name => $self->name, where => $+ })
-	  )
+	)
 	)+ \z /sxo;
 
 	! $parens_open
@@ -239,7 +248,7 @@ sub _build_ast($$)
 
 			my $next  = $self->_build_ast($t, $prio)
 				or error __x"expression '{name}', monadic '{op}' not followed by anything useful",
-				    name => $self->name, op => $op;
+					name => $self->name, op => $op;
 
 			$first = MF::PREFIX->new($op, $next);
 			redo PROGRESS;
@@ -255,14 +264,12 @@ sub _build_ast($$)
 				$next = MF::OPERATOR->new('+');
 			}
 			else
-			{	error __x"expression '{name}', expected infix operator but found '{type}'",
-					name => $self->name, type => ref $next;
+			{	error __x"expression '{name}', expected infix operator but found '{type}'", name => $self->name, type => ref $next;
 			}
 		}
 
 		my $op = $next->token;
-		@$t or error __x"expression '{name}', infix operator '{op}' requires right-hand argument",
-				name => $self->name, op => $op;
+		@$t or error __x"expression '{name}', infix operator '{op}' requires right-hand argument", name => $self->name, op => $op;
 
 		my ($next_prio, $assoc) = MF::OPERATOR->find($op);
 
@@ -292,7 +299,7 @@ sub _build_ast($$)
 	}
 }
 
-#--------------------------
+#--------------------
 =section Running
 
 =method evaluate [ $context, %options ]
@@ -302,7 +309,7 @@ may go without context.
 
 =option  expect $type
 =default expect <any ::Type>
-When specified, the result will be of the expected $type or C<undef>.  This overrules
+When specified, the result will be of the expected $type or undef.  This overrules
 M<new(returns)>.  Without either, the result type depends on the evaluation of the
 expression.
 =cut
@@ -335,6 +342,9 @@ performance.
 See L<Math::Formula::Context/"CODE as expression"> for details.
 =cut
 
+=error not an expression (string needs \\ ) for '$data'
+=cut
+
 my %_match = map { my $match = $_->_match; ( $_ => qr/^$match$/x ) }
 	qw/MF::DATETIME MF::TIME MF::DATE MF::DURATION/;
 
@@ -349,21 +359,20 @@ sub toType($)
 
 	my $match = sub { my $type = shift; my $match = $type->_match; qr/^$match$/ };
 
-	return 
-		ref $data eq 'SCALAR'            ? MF::STRING->new($data)
-	  : $data =~ /^[+-]?[0-9]+$/         ? MF::INTEGER->new(undef, $data)
-	  : $data =~ /^[+-]?[0-9]+\./        ? MF::FLOAT->new(undef, $data)
-	  : $data =~ /^(?:true|false)$/      ? MF::BOOLEAN->new($data)
-	  : ref $data eq 'Regexp'            ? MF::REGEXP->new(undef, $data)
-	  : $data =~ $_match{'MF::DATETIME'} ? MF::DATETIME->new($data)
-	  : $data =~ $_match{'MF::TIME'}     ? MF::TIME->new($data)
-	  : $data =~ $_match{'MF::DATE'}     ? MF::DATE->new($data)
-	  : $data =~ $_match{'MF::DURATION'} ? MF::DURATION->new($data)
-	  : $data =~ /^(['"]).*\1$/          ? MF::STRING->new($data)
-	  : error __x"not an expression (string needs \\ ) for '{data}'", data => $data;
+	  ref $data eq 'SCALAR'            ? MF::STRING->new($data)
+	: $data =~ /^[+-]?[0-9]+$/         ? MF::INTEGER->new(undef, $data)
+	: $data =~ /^[+-]?[0-9]+\./        ? MF::FLOAT->new(undef, $data)
+	: $data =~ /^(?:true|false)$/      ? MF::BOOLEAN->new($data)
+	: ref $data eq 'Regexp'            ? MF::REGEXP->new(undef, $data)
+	: $data =~ $_match{'MF::DATETIME'} ? MF::DATETIME->new($data)
+	: $data =~ $_match{'MF::TIME'}     ? MF::TIME->new($data)
+	: $data =~ $_match{'MF::DATE'}     ? MF::DATE->new($data)
+	: $data =~ $_match{'MF::DURATION'} ? MF::DURATION->new($data)
+	: $data =~ /^(['"]).*\1$/          ? MF::STRING->new($data)
+	: error __x"not an expression (string needs \\ ) for '{data}'", data => $data;
 }
 
-#--------------------------
+#--------------------
 =chapter DETAILS
 
 This module handles formulas.  Someone (your application user) gets more power
@@ -372,7 +381,7 @@ in configuring its settings.  Very simple example:
   # In a back-up script, configured in JSON
   "daily_backups"  : "/var/tmp/backups/daily",
   "weekly_backups" : "/var/tmp/backups/weekly",
-  
+
   # With Math::Formula::Config::JSON
   "backup_dir"     : "/var/tmp/backups/",
   "daily_backups"  : "= backup_dir ~ 'daily'",
@@ -411,7 +420,7 @@ Use any of the following syntaxes:
   "\"string\""   '"string"'    "'$string'"   # $string with escaped quotes!
   \"string"       \'string'    \$string      # or, use a SCALAR reference
 
-When you use a M<Math::Formula::Context> (preferred), you can select your
+When you use a Math::Formula::Context (preferred), you can select your
 own solution via M<Math::Formula::Context::new(lead_expressions)>.  It is
 possible to configure that all strings get the normal quotes, and expressions
 start with C<=> (or any other leading string).
@@ -456,7 +465,7 @@ helper methods as features.
 
 As B<prefix> operator, you can use C<not>, C<->, C<+>, and C<exists>
 on applicable data types.  The C<#> (fragment) and C<.> (attributes)
-prefixes are weird cases: see M<Math::Formula::Context>.
+prefixes are weird cases: see Math::Formula::Context.
 
 Operators only work on specific data types, but some types will
 automatically convert.  For instance, all types can be cast into

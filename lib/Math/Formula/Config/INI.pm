@@ -1,5 +1,10 @@
+#oodist: *** DO NOT USE THIS VERSION FOR PRODUCTION ***
+#oodist: This file contains OODoc-style documentation which will get stripped
+#oodist: during its release in the distribution.  You can use this file for
+#oodist: testing, however the code of this development version may be broken!
+
 package Math::Formula::Config::INI;
-use base 'Math::Formula::Config';
+use parent 'Math::Formula::Config';
 
 use warnings;
 use strict;
@@ -13,6 +18,7 @@ use Config::INI::Reader  ();
 use Math::Formula::Context ();
 use Math::Formula          ();
 
+#--------------------
 =chapter NAME
 
 Math::Formula::Config::INI - load/save formulas to file as INI
@@ -20,14 +26,14 @@ Math::Formula::Config::INI - load/save formulas to file as INI
 =chapter SYNOPSIS
 
   my $context = Math::Formula::Content->new(name => 'test');
-  my $config = Math::Formula::Config::INI->new(directory => $dir);
+  my $config  = Math::Formula::Config::INI->new(directory => $dir);
 
   $config->save($context);
   my $context = $config->load('test');
 
 =chapter DESCRIPTION
 
-Save and load a M<Math::Formula::Context> to INI files.  The INI file
+Save and load a Math::Formula::Context to INI files.  The INI file
 is not too complex.
 
 You need to have installed B<Config::INI>.  That module is not in the
@@ -39,7 +45,7 @@ to the main code.
 =section Constructors
 =cut
 
-#----------------------
+#--------------------
 =section Actions
 
 =method save $context, %args
@@ -49,6 +55,9 @@ This is a useful method when default configuration templates need to be generate
 =option filename STRING
 =default filename C<< $context->name .ini >>
 Save under a different filename than derived from the name of the context.
+=cut
+
+=warning cannot (yet) save CODE, skipped '$name'
 =cut
 
 sub save($%)
@@ -107,7 +116,7 @@ sub _serialize($$)
 }
 
 =method load $name, %options
-Load a M<Math::Formula::Context> for an INI file.
+Load a Math::Formula::Context for an INI file.
 
 =option  filename FILENAME
 =default filename <directory/$name.ini>
@@ -120,8 +129,7 @@ sub load($%)
 
 	my $read  = Config::INI::Reader->read_file($fn);
 	my $attrs = $self->_set_decode($read->{_});
-	Math::Formula::Context->new(name => $name,
-		%$attrs,
+	Math::Formula::Context->new(name => $name, %$attrs,
 		formulas => $self->_set_decode($read->{formulas}),
 	);
 }
@@ -150,10 +158,10 @@ sub _unpack($$)
 	: MF::STRING->new(undef, $encoded);
 }
 
-#----------------------
+#--------------------
 =chapter DETAILS
 
-According to F<https://en.wikipedia.org/wiki/INI_file>, INI files only support strings
+According to L<https://en.wikipedia.org/wiki/INI_file>, INI files only support strings
 and numbers.  To stay as close as possible to that description, everything else is
 put between double quotes (also the booleans).
 

@@ -1,5 +1,10 @@
+#oodist: *** DO NOT USE THIS VERSION FOR PRODUCTION ***
+#oodist: This file contains OODoc-style documentation which will get stripped
+#oodist: during its release in the distribution.  You can use this file for
+#oodist: testing, however the code of this development version may be broken!
+
 package Math::Formula::Config::YAML;
-use base 'Math::Formula::Config';
+use parent 'Math::Formula::Config';
 
 use warnings;
 use strict;
@@ -7,14 +12,15 @@ use strict;
 use Log::Report 'math-formula';
 
 use YAML::XS qw/Dump Load/;
-use boolean ();
-use File::Slurper 'read_binary';
+use boolean       ();
+use File::Slurper qw/read_binary/;
 
 # It is not possible to use YAML.pm, because it cannot produce output where
 # boolean true and a string with content 'true' can be distinguished.
 
 use Scalar::Util 'blessed';
 
+#--------------------
 =chapter NAME
 
 Math::Formula::Config::YAML - load/save formulas to file in YAML
@@ -42,7 +48,7 @@ we do not want to add complications to the main code.
 =section Constructors
 =cut
 
-#----------------------
+#--------------------
 =section Actions
 
 =method save $context, %args
@@ -52,25 +58,29 @@ This is a useful method when default configuration templates need to be generate
 =option filename STRING
 =default filename C<< $context->name .yml>
 Save under a different filename than derived from the name of the context.
+
+=fault Trying to save context '$name' to $file: $!
+=fault Error on close while saving '$name' to $file: $!
+=warning cannot (yet) save CODE, skipped '$name'
 =cut
 
 sub save($%)
 {	my ($self, $context, %args) = @_;
 	my $name  = $context->name;
 
- 	local $YAML::XS::Boolean = "boolean";
+	local $YAML::XS::Boolean = "boolean";
 	my $index = $context->_index;
 
 	my $fn = $self->path_for($args{filename} || "$name.yml");
 	open my $fh, '>:encoding(utf8)', $fn
-		or fault __x"Trying to save context '{name}' to {fn}", name => $name, fn => $fn;
+		or fault __x"Trying to save context '{name}' to {file}", name => $name, file => $fn;
 
 	$fh->print(Dump $self->_set($index->{attributes}));
 	$fh->print(Dump $self->_set($index->{formulas}));
 	$fh->print(Dump $self->_set($index->{fragments}));
 
 	$fh->close
-		or fault __x"Error on close while saving '{name}' to {fn}", name => $name, fn => $fn;
+		or fault __x"Error on close while saving '{name}' to {file}", name => $name, file => $fn;
 }
 
 sub _set($)
@@ -114,7 +124,7 @@ sub _serialize($$)
 }
 
 =method load $name, %options
-Load a M<Math::Formula::Context> for a yml file.
+Load a Math::Formula::Context for a yml file.
 
 =option  filename FILENAME
 =default filename <directory/$name.yml>
@@ -129,8 +139,7 @@ sub load($%)
 	my ($attributes, $forms, $frags) = Load(read_binary $fn);
 
 	my $attrs = $self->_set_decode($attributes);
-	Math::Formula::Context->new(name => $name,
-		%$attrs,
+	Math::Formula::Context->new(name => $name, %$attrs,
 		formulas => $self->_set_decode($forms),
 	);
 }
@@ -163,7 +172,7 @@ sub _unpack($$)
 	: MF::STRING->new(undef, $encoded);
 }
 
-#----------------------
+#--------------------
 =chapter DETAILS
 
 YAML has a super powerful syntax, which natively supports integers,
@@ -174,7 +183,7 @@ The Context's attributes are in the first document.  The formulas are
 in the second document.  The fragments will get a place in the third
 document (but are not yet supported).
 
-On Perl, you will need M<YAML::XS> to be able to treat booleans
+On Perl, you will need YAML::XS to be able to treat booleans
 correctly.  For instance, C<YAML.pm> will create a string with content
 'true' without quotes... which makes it a boolean.
 

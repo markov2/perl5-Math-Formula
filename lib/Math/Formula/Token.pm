@@ -1,3 +1,8 @@
+#oodist: *** DO NOT USE THIS VERSION FOR PRODUCTION ***
+#oodist: This file contains OODoc-style documentation which will get stripped
+#oodist: during its release in the distribution.  You can use this file for
+#oodist: testing, however the code of this development version may be broken!
+
 use warnings;
 use strict;
 
@@ -19,18 +24,16 @@ sub new(%) { my $class = shift; bless [@_], $class }
 sub token  { $_[0][0] //= $_[0]->_token($_[0]->value) }
 sub _token { $_[1] }
 
-#-------------------
 # MF::PARENS, parenthesis tokens
 # Parser object to administer parenthesis, but disappears in the AST.
 
 package
 	MF::PARENS;
 
-use base 'Math::Formula::Token';
+use base 'Math::Formula::Token';  #XXX module does not load with 'use parent'
 
 sub level { $_[0][1] }
 
-#-------------------
 # MF::OPERATOR, operator of yet unknown type.
 # In the AST upgraded to either MF::PREFIX or MF::INFIX.
 
@@ -41,8 +44,8 @@ use base 'Math::Formula::Token';
 use Log::Report 'math-formula', import => [ 'panic' ];
 
 use constant {
-    # Associativity
-    LTR => 1, RTL => 2, NOCHAIN => 3,
+	# Associativity
+	LTR => 1, RTL => 2, NOCHAIN => 3,
 };
 
 # method operator(): Returns the operator value in this token, which
@@ -57,10 +60,10 @@ sub compute
 my %table;
 {
 	# Prefix operators and parenthesis are not needed here
-    # Keep in sync with the table in Math::Formula
-	my @order = (
+	# Keep in sync with the table in Math::Formula
+	my @order =	(
 #		[ LTR,     ',' ],
- 		[ LTR,     '?', ':' ],        # ternary ?:
+		[ LTR,     '?', ':' ],        # ternary ?:
 		[ NOCHAIN, '->' ],
 		[ LTR,     qw/or xor/, '//' ],
 		[ LTR,     'and' ],
@@ -82,15 +85,14 @@ my %table;
 
 # method find($operator)
 # Returns a list with knowledge about a know operator.
-#   The first argument is a priority level for this operator.  The actual
+# The first argument is a priority level for this operator.  The actual
 # priority numbers may change over releases of this module.
-#   The second value is a constant of associativety.  Either the constant
+# The second value is a constant of associativety.  Either the constant
 # LTR (compute left to right), RTL (right to left), or NOCHAIN (non-stackable
 # operator).
 
 sub find($) { @{$table{$_[1]} // panic "op $_[1]" } }
 
-#-------------------
 # MF::PREFIX, monadic prefix operator
 # Prefix operators process the result of the expression which follows it.
 # This is a specialization from the MF::OPERATOR type, hence shares its methods.
@@ -105,13 +107,12 @@ sub child() { $_[0][1] }
 
 sub compute($$)
 {	my ($self, $context) = @_;
-    my $value = $self->child->compute($context)
+	my $value = $self->child->compute($context)
 		or return undef;
 
 	$value->prefix($self->operator, $context);
 }
 
-#-------------------
 # MF::INFIX, infix (dyadic) operator
 # Infix operators have two arguments.  This is a specialization from the
 # MF::OPERATOR type, hence shares its methods.
@@ -147,7 +148,7 @@ sub _compare_ops { keys %comparison }
 sub compute($$)
 {	my ($self, $context) = @_;
 
-    my $left  = $self->left->compute($context)
+	my $left  = $self->left->compute($context)
 		or return undef;
 
 	my $right = $self->right->compute($context)
@@ -168,7 +169,6 @@ sub compute($$)
 }
 
 
-#-------------------
 # MF::TERNARY,  if ? then : else
 # Ternary operators have three arguments.  This is a specialization from the
 # MF::OPERATOR type, hence shares its methods.
@@ -185,13 +185,12 @@ sub else()      { $_[0][3] }
 sub compute($$)
 {	my ($self, $context) = @_;
 
-    my $cond  = $self->condition->compute($context)
+	my $cond  = $self->condition->compute($context)
 		or return undef;
 
 	($cond->value ? $self->then : $self->else)->compute($context)
 }
 
-#-------------------
 # When used, this returns a MF::STRING taken from the captures in the context.
 
 package

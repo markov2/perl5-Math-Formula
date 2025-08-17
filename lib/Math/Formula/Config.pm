@@ -1,11 +1,18 @@
+#oodist: *** DO NOT USE THIS VERSION FOR PRODUCTION ***
+#oodist: This file contains OODoc-style documentation which will get stripped
+#oodist: during its release in the distribution.  You can use this file for
+#oodist: testing, however the code of this development version may be broken!
+
 package Math::Formula::Config;
 
 use warnings;
 use strict;
- 
-use File::Spec ();
-use Log::Report 'math-formula';
 
+use Log::Report qw/math-formula/;
+
+use File::Spec  ();
+
+#--------------------
 =chapter NAME
 
 Math::Formula::Config - load/save formulas to file
@@ -22,9 +29,9 @@ sets of expressions to and from a program.
 
 The following serialization formats are supported:
 =over 4
-=item * JSON M<Math::Formula::Config::JSON>
-=item * YAML M<Math::Formula::Config::YAML>
-=item * INI  M<Math::Formula::Config::INI>
+=item * JSON Math::Formula::Config::JSON
+=item * YAML Math::Formula::Config::YAML
+=item * INI  Math::Formula::Config::INI
 =back
 
 =chapter METHODS
@@ -36,6 +43,9 @@ The following serialization formats are supported:
 =requires directory DIRECTORY
 In this directory, the output files will be made.  For each context (fragment),
 a separate file is made.
+
+=error Save directory required
+=error Save directory '$dir' does not exist
 =cut
 
 sub new(%) { my $class = shift; (bless {}, $class)->init({@_}) }
@@ -51,7 +61,7 @@ sub init($)
 	$self;
 }
 
-#----------------------
+#--------------------
 =section Attributes
 
 =method directory
@@ -70,7 +80,7 @@ sub path_for($$)
 	File::Spec->catfile($self->directory, $file);
 }
 
-#----------------------
+#--------------------
 =section Actions
 
 =method save $context, %args
@@ -79,16 +89,15 @@ This is a useful method when default configuration templates need to
 be generated.
 =cut
 
-sub save($%) { die "Save under construction" }
+sub save($%) { ... }
 
 =method load $name, %options
-Load a M<Math::Formula::Context> for an INI file.
+Load a Math::Formula::Context for an INI file.
 
 =option  filename FILENAME
 =default filename <directory/$name.ini>
-
 =cut
 
-sub load($%) { die "Load under construction" }
+sub load($%) { ... }
 
 1;
