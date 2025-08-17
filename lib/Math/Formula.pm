@@ -369,7 +369,7 @@ sub toType($)
 	: $data =~ $_match{'MF::DATE'}     ? MF::DATE->new($data)
 	: $data =~ $_match{'MF::DURATION'} ? MF::DURATION->new($data)
 	: $data =~ /^(['"]).*\1$/          ? MF::STRING->new($data)
-	: error __x"not an expression (string needs \\ ) for '{data}'", data => $data;
+	:   error __x"not an expression (string needs \\ ) for '{data}'", data => $data;
 }
 
 #--------------------

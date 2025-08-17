@@ -124,7 +124,7 @@ sub attribute {
 	undef;
 }
 
-sub infix($@)
+sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
 
@@ -196,7 +196,7 @@ sub prefix($)
 	$self->SUPER::prefix($op, $context);
 }
 
-sub infix($$$)
+sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
 
@@ -309,7 +309,7 @@ sub cast($)
 	: $self->SUPER::cast($to);
 }
 
-sub infix($$$)
+sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
 
@@ -432,7 +432,7 @@ sub prefix($)
 	: $self->SUPER::prefix($op, $context);
 }
 
-sub infix($$$)
+sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
 
@@ -536,7 +536,7 @@ sub prefix($$)
 	: $self->SUPER::prefix($op, $context)
 }
 
-sub infix($$$)
+sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
 
@@ -658,7 +658,7 @@ sub cast($)
 	: $self->SUPER::cast($to);
 }
 
-sub infix($$$@)
+sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
 
@@ -791,7 +791,7 @@ sub cast($)
 	$self->SUPER::cast($to);
 }
 
-sub infix($$@)
+sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
 
@@ -927,7 +927,7 @@ sub _sec_diff($$)
 	+{ hour => $hrs, minute => $min, second => $sec, nanosecond => $ns};
 }
 
-sub infix($$@)
+sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
 
@@ -1036,7 +1036,7 @@ sub prefix($$)
 	: $self->SUPER::prefix($op, $context);
 }
 
-sub infix($$@)
+sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
 
@@ -1123,7 +1123,7 @@ sub prefix($$)
 	:   $self->SUPER::prefix($op, $context);
 }
 
-sub infix($$@)
+sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
 
@@ -1404,7 +1404,7 @@ use Log::Report 'math-formula', import => [ qw/panic error __x/ ];
 sub name    { $_[0][0] }
 sub context { $_[0][1] }
 
-sub infix($$@)
+sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
 	my $name = $right->token;
