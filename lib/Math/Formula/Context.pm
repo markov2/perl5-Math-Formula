@@ -148,16 +148,16 @@ sub attribute($)
 #--------------------
 =section Formula and Fragment management
 
-=method add (@formulas|@fragments|\%configs)-LIST
-=method add $name => $value, %options
+=method add ($name => $value, %options)|@objects|\%configs
 Add one or more items to the context.
 
-When the first argument is a $name, then the $value and %options is
+When the first argument is a $name, then the $value and %options are
 used to create a formula or fragment (when the name starts with a '#')
 via M<Math::Formula::new()>.
 
-Otherwise, the LIST is a sequence of prepared @formulas and @fragment
-objects, or a HASH with name to formula configurations.
+Otherwise formula- and fragment @objects can be passed.  It is also
+possible to pass a HASH of %configs to defined multiple formulas at the
+same time.
 
 =examples:
   $context->add(wakeup => '07:00:00', returns => 'MF::TIME');

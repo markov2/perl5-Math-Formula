@@ -48,14 +48,13 @@ to the main code.
 #--------------------
 =section Actions
 
-=method save $context, %args
+=method save $context, %options
 Serialize the $context to INI files, as storage or to be edited by hand.
 This is a useful method when default configuration templates need to be generated.
 
 =option filename STRING
 =default filename C<< $context->name .ini >>
 Save under a different filename than derived from the name of the context.
-=cut
 
 =warning cannot (yet) save CODE, skipped '$name'
 =cut

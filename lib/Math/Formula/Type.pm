@@ -1222,7 +1222,6 @@ Attributes on names
 
   live // dead // false         # pick first rule which exists
 
-=error name '$name' cannot be used as value.
 =cut
 
 package
@@ -1234,7 +1233,11 @@ use Log::Report 'math-formula', import => [ qw/error __x/ ];
 my $pattern = '[_\p{Alpha}][_\p{AlNum}]*';
 sub _match() { $pattern }
 
-sub value($) { error __x"name '{name}' cannot be used as value.", name => $_[0]->token }
+=method value
+=error name '$name' cannot be used as value.
+=cut
+
+sub value() { error __x"name '{name}' cannot be used as value.", name => $_[0]->token }
 
 =c_method validated $string, $where
 Create a MF::NAME from a $string which needs to be validated for being a valid
@@ -1315,10 +1318,6 @@ Besides, it supports curly alternatives like C<*.{jpg,gif,png}>.
   "abc" unlike "b"   => BOOLEAN true
   "abc" unlike "*b*" => BOOLEAN true
   "abc" unlike "*c"  => BOOLEAN false
-
-=cut
-
-=warning cannot convert qr back to pattern, do $regexp
 =cut
 
 package
@@ -1326,6 +1325,10 @@ package
 use base 'MF::STRING';
 
 use Log::Report 'math-formula', import => [ qw/warning __x/ ];
+
+=c_method new $token|undef, [$value]
+=warning cannot convert qr back to pattern, do $regexp
+=cut
 
 sub _token($) {
 	warning __x"cannot convert qr back to pattern, do {regexp}", regexp => $_[1];

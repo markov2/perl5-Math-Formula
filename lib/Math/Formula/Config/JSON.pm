@@ -45,12 +45,12 @@ to the main code.
 #--------------------
 =section Actions
 
-=method save $context, %args
+=method save $context, %options
 Serialize the $context to JSON files, as storage or to be edited by hand.
 This is a useful method when default configuration templates need to be generated.
 
 =option filename STRING
-=default filename C<< $context->name .json>
+=default filename C<< $context->name .json >>
 Save under a different filename than derived from the name of the context.
 
 =fault Trying to save context '$name' to $file: $!

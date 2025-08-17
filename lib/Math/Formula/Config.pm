@@ -83,7 +83,7 @@ sub path_for($$)
 #--------------------
 =section Actions
 
-=method save $context, %args
+=method save $context, %options
 Serialize the $context into a file as storage or to be edited by hand.
 This is a useful method when default configuration templates need to
 be generated.
