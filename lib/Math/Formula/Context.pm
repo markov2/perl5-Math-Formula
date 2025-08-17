@@ -129,6 +129,7 @@ The following attributes are currently defined:
   ctx_mf_version  MF::STRING    Math::Formula version, useful for read/save
 
 =method attribute $name
+Returns the M<Math::Formula> object for the attribute $name.
 =cut
 
 sub attribute($)
@@ -140,14 +141,16 @@ sub attribute($)
 #--------------
 =section Formula and Fragment management
 
-=method add LIST
+=method add (@formulas|@fragments|\%configs)-LIST
+=method add $name => $value, %options
 Add one or more items to the context.
 
-When a LIST is used and the first argument is a name, then the data is
-used to create a $formula or fragment (when the name starts with a '#').  
+When the first argument is a $name, then the $value and %options is
+used to create a formula or fragment (when the name starts with a '#')
+via M<Math::Formula::new()>.
 
-Otherwise, the LIST is a sequence of prepared formulas and fragments,
-or a HASH with 
+Otherwise, the LIST is a sequence of prepared @formulas and @fragment
+objects, or a HASH with name to formula configurations.
 
 =examples:
   $context->add(wakeup => '07:00:00', returns => 'MF::TIME');
@@ -192,10 +195,11 @@ sub add(@)
 	undef;
 }
 
-=method addFormula LIST
-Add a single formula to this context.  The formula is returned.
+=method addFormula $name, $value, %options
+Add a single formula to this context.  The formula is created via M<Math::Formula::new()>, passing
+all %options, and then returned.
 
-=example of addFormula
+=example of addFormula()
 
 Only the 3rd and 4th line of the examples below are affected by C<new(lead_expressions)>:
 only in those cases it is unclear whether we speak about a STRING or an expression.  But,
@@ -249,7 +253,7 @@ sub addFormula(@)
 }
 
 =method formula $name
-Returns the formula with this specified name.
+Returns the M<Math::Formula> object with this specified name.
 =cut
 
 sub formula($) { $_[0]->{MFC_forms}{$_[1]} }

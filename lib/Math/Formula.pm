@@ -30,6 +30,8 @@ Math::Formula - expressions on steroids
   $context->add( { size => '42k', header => '324', total => 'size + header' });
   my $total   = $context->value('total');
 
+  my age = $context->value('(#system.now.date - 1966-04-05).years');
+
   # To build connectors to objects in your program, interfaces.
   # See Math::Formula::Context.
   my $formula = Math::Formula->new(size => \&own_sub, %options);

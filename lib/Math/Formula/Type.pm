@@ -8,7 +8,8 @@ use base 'Math::Formula::Token';
 #!!! The declarations of all other packages in this file are indented to avoid
 #!!! indexing by CPAN.
 
-use Log::Report 'math-formula', import => [ qw/warning error __x/ ];
+use Log::Report 'math-formula',
+	import => [ qw/warning error __x/ ];
 
 # Object is an ARRAY. The first element is the token, as read from the formula
 # or constructed from a computed value.  The second is a value, which can be
