@@ -90,8 +90,9 @@ the value.
 =cut
 
 # token() is implemented in de base-class ::Token, but documented here
+
 # Returns a value as result of a calculation.
-# nothing to compute for most types: simply itself
+# Nothing to compute for most types: simply itself.
 sub compute { $_[0] }
 
 =method value
@@ -110,6 +111,7 @@ removed, intermediate sequences of blanks shortened to one blank.
 =error cannot find prefx operator '$op' on a $child
 =warning cannot find attribute '$attr' for $class '$token'
 =error cannot match infix operator '$op' for ($left -> $right)
+=error rvalue name '$name' for operator '$op' is not a formula
 =cut
 
 sub collapsed($) { $_[0]->token =~ s/\s+/ /gr =~ s/^ //r =~ s/ $//r }
@@ -128,9 +130,19 @@ sub infix(@)
 {	my $self = shift;
 	my ($op, $right, $context) = @_;
 
-	if($op eq '.' && $right->isa('MF::NAME'))
-	{	if(my $attr = $self->attribute($right->token))
-		{	return ref $attr eq 'CODE' ? $attr->($self, @_) : $attr;
+	if($right->isa('MF::NAME'))
+	{	my $token = $right->token;
+		if($op eq '.')
+		{	if(my $attr = $self->attribute($token))
+			{	return ref $attr eq 'CODE' ? $attr->($self, @_) : $attr;
+			}
+		}
+		else
+		{	defined $context->formula($token)
+				or error __x"rvalue name '{name}' for operator '{op}' is not a formula", name => $token, op => $op;
+
+			my $value = $context->evaluate($token);
+			return $self->infix($op, $value, $context);
 		}
 	}
 
@@ -138,7 +150,8 @@ sub infix(@)
 	return $self->cast('MF::STRING', $context)->infix(@_)
 		if $op eq '~';
 
-	error __x"cannot match infix operator '{op}' for ({left} -> {right})", op => $op, left => ref $self, right => ref $right;
+	error __x"cannot match infix operator '{op}' for ({left} -> {right})",
+		op => $op, left => ref $self, right => ref $right;
 }
 
 #--------------------
@@ -1209,8 +1222,6 @@ Attributes on names
 
   live // dead // false         # pick first rule which exists
 
-=cut
-
 =error name '$name' cannot be used as value.
 =cut
 
@@ -1228,7 +1239,6 @@ sub value($) { error __x"name '{name}' cannot be used as value.", name => $_[0]-
 =c_method validated $string, $where
 Create a MF::NAME from a $string which needs to be validated for being a valid
 name.  The $where will be used in error messages when the $string is invalid.
-=cut
 
 =error Illegal name '$name' in '$where'
 =cut

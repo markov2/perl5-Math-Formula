@@ -4,6 +4,10 @@ All changes made by Mark Overmeer, unless explicitly stated otherwise.
 
 version 0.17:
 
+	Fixes:
+	- name as rvalue
+	  [James Wright] rt.cpan.org #168753
+
 	Improvements:
 	- convert to OODoc 3.02
 	- apply oorestyle
