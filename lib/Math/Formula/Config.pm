@@ -29,9 +29,9 @@ sets of expressions to and from a program.
 
 The following serialization formats are supported:
 =over 4
-=item * JSON Math::Formula::Config::JSON
-=item * YAML Math::Formula::Config::YAML
-=item * INI  Math::Formula::Config::INI
+=item * JSON via Math::Formula::Config::JSON
+=item * YAML via Math::Formula::Config::YAML
+=item * INI  via Math::Formula::Config::INI
 =back
 
 =chapter METHODS

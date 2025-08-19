@@ -30,6 +30,10 @@ my %oodist   = (
 	tests    => {
 	},
 
+	raw  => {
+		publish        => "$publish/raw",
+	},
+
 	release  => {
 		publish        => "$publish/source",
 	},

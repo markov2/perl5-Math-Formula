@@ -43,8 +43,8 @@ Many of the %options make sense when this context is reloaded for file.
 =default formula C< [] >
 One or more formula, passed to M<add()>.
 
-=option  lead_expressions ''|STRING
-=default lead_expressions ''
+=option  lead_expressions C<"">|STRING
+=default lead_expressions C<"">
 Read section L</"Keep strings apart from expressions"> below.  When a blank string,
 you will need to put (single or double) quotes around your strings within your strings,
 or pass a SCALAR reference.  But that may be changed.
@@ -522,9 +522,9 @@ Some examples of explicit return object generation:
 See Math::Formula::Type for detailed explanation for the types which
 can be returned.  These are the types with examples for tokens and values:
 
-  MF::BOOLEAN   'true'            1        # anything !=0 is true
-  MF::STRING    '"tic"'           'tic'    # the token has quotes!
-  MF::STRING    \'tic' \$string   'tic'    # no quotes with SCALAR ref
+  MF::BOOLEAN   'true'            1         # anything !=0 is true
+  MF::STRING    '"tic"'           'tic'     # the token has quotes!
+  MF::STRING    \'tic' \$string   'tic'     # no quotes with SCALAR ref
   MF::INTEGER   '42'              42
   MF::FLOAT     '3.14'            3.14
   MF::DATETIME  '2023-...T09:...' DateTime-object
@@ -539,7 +539,7 @@ can be returned.  These are the types with examples for tokens and values:
 
 When you decide to be lazy, Math::Formula will attempt to auto-detect the
 type.  This is helped by the fact that operator will cast types which they
-need, for instance MF::FLOAT to MF::INTEGER or the reverse.
+need, for instance C<MF::FLOAT> to C<MF::INTEGER> or the reverse.
 
 =cut
 

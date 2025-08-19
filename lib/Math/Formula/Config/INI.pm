@@ -160,9 +160,10 @@ sub _unpack($$)
 #--------------------
 =chapter DETAILS
 
-According to L<https://en.wikipedia.org/wiki/INI_file>, INI files only support strings
-and numbers.  To stay as close as possible to that description, everything else is
-put between double quotes (also the booleans).
+L<According to Wikipedia|https://en.wikipedia.org/wiki/INI_file>, INI files only
+support strings and numbers.  To stay as close as possible to that
+description, everything else is put between double quotes (also the
+booleans).
 
 Only the quoted data may contain attributes.
 

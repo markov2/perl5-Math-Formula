@@ -8,6 +8,9 @@ version 0.18:
 	- do not run json tests when Cpanel::JSON::XS is not installed.
 	  rt#168964 [Slaven Rezic]
 
+	Improvements:
+	- minor doc visualization tweeks.
+
 version 0.17: Sun Aug 17 09:13:41 PM CEST 2025
 
 	Fixes:

@@ -33,7 +33,7 @@ Math::Formula::Config::JSON - load/save formulas to file
 
 Save and load a Math::Formula::Context to JSON files.
 
-You need to have installed B<Cpanel::JSON::XS>.  That module is not in the
+You need to B<have installed Cpanel::JSON::XS>.  That module is not in the
 dependencies of this packages, because we do not want to add complications
 to the main code.
 
@@ -49,7 +49,7 @@ to the main code.
 Serialize the $context to JSON files, as storage or to be edited by hand.
 This is a useful method when default configuration templates need to be generated.
 
-=option filename STRING
+=option  filename STRING
 =default filename C<< $context->name .json >>
 Save under a different filename than derived from the name of the context.
 
@@ -172,28 +172,28 @@ sub _unpack($$)
 =chapter DETAILS
 
 JSON seems to be everyone's favorite serialization syntax, nowadays.  It natively
-supports integers, floats, booleans, and strings.  Formulas get a leading '='
-(not yet configurable).
+supports integers, floats, booleans, and strings.  Formulas get a leading C<=>
+(not configurable (yet)).
 
 =example
-{
-  "created" : "2023-02-28T16:30:27+0000",
-  "formulas" : {
-     "expr1" : "=1 + 2 * 3",
-     "expr2" : "=\"abc\".size + 3k; returns='MF::INTEGER'",
-     "fakes" : false,
-     "float" : 3.14,
-     "int" : 42,
-     "longer" : "abc def yes no",
-     "no_quotes" : "abc",
-     "some_truth" : true,
-     "string" : "true"
-  },
-  "mf_version" : "",
-  "name" : "test",
-  "updated" : "2023-02-28T16:30:27+0000",
-  "version" : 1.0
-}
+  {
+    "created" : "2023-02-28T16:30:27+0000",
+    "formulas" : {
+       "expr1" : "=1 + 2 * 3",
+       "expr2" : "=\"abc\".size + 3k; returns='MF::INTEGER'",
+       "fakes" : false,
+       "float" : 3.14,
+       "int" : 42,
+       "longer" : "abc def yes no",
+       "no_quotes" : "abc",
+       "some_truth" : true,
+       "string" : "true"
+    },
+    "mf_version" : "",
+    "name" : "test",
+    "updated" : "2023-02-28T16:30:27+0000",
+    "version" : 1.0
+  }
 =cut
 
 1;

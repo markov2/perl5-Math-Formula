@@ -71,7 +71,7 @@ The expression needs a $name.  Expressions can refer to each other via this name
 
 The $expression is usually a (utf8) string, which will get parsed and
 evaluated on demand.  The $expression may also be a prepared node (any
-<Math::Formula::Type> object).
+Math::Formula::Type object).
 
 As special hook, you may also provide a CODE as $expression.  This will
 be called as
@@ -80,7 +80,7 @@ be called as
 
 Optimally, the expression returns any Math::Formula::Type object.  Otherwise,
 auto-detection of the computed result kicks in.  The %options are passed to
-M<evaluate()>  More details below in L<Math::Formula::Context/"CODE as expression">.
+M<evaluate()>. More details below in L<Math::Formula::Context/"CODE as expression">.
 
 =option  returns $type
 =default returns undef
@@ -394,7 +394,7 @@ gets.  Especially when you need to work with timestamps.
 
 Examples for all data-types which C<Math::Formula> supports:
 
-  true and false               # real booleans
+  true false                   # real booleans
   "abc"  'abc'                 # the usual strings, WARNING: read below
   7  89k  5Mibi                # integers with multiplier support
   =~ "c$"                      # regular expression matching
@@ -413,7 +413,7 @@ And constructs
   #unit.owner                  # fragments (nested context, namespaces)
 
 B<Warning:> in your code, all these above are place between quotes.
-This makes it inconvenient to B<use strings>, which are also usually
+This makes it B<a bit inconvenient to use strings>, which are also usually
 between quotes.  So: strings should stand-out from expressions.
 Use any of the following syntaxes:
 
@@ -495,10 +495,10 @@ operator).
 =subsection Comparison operators
 
 Some data types support numeric comparison (implement C<< <=> >>, the
-spaceship operator), other support textual comparison (implement C< cmp >),
+spaceship operator), other support textual comparison (implement C<cmp>),
 where also some types have no intrinsic order.
 
-The C<< <=> >> and C< cmp > return an integer: -1, 0, or 1, representing
+The C<< <=> >> and C<cmp> return an integer: -1, 0, or 1, representing
 smaller, equal, larger.
 
   :num: :text:

@@ -241,10 +241,10 @@ sub _value($) { $_[1] eq 'true' }
 Represents a sequence of UTF-8 characters, which may be used single and
 double quoted.
 
-Strings may be cast into regular expressions (MF::REGEXP) when used on the right
+Strings may be cast into regular expressions (C<MF::REGEXP>) when used on the right
 side of a regular expression match operator ('C<=~>' and 'C<!~>').
 
-Strings may be cast into a pattern (MF::PATTERN) when used on the right
+Strings may be cast into a pattern (C<MF::PATTERN>) when used on the right
 of a pattern match operator ('C<like>' and 'C<unlike>').
 
 Besides the four match operators, strings can be concatenated using 'C<~>'.
@@ -285,9 +285,9 @@ String operations:
 
 Attributes:
 
-  "abc".length       => INTEGER  3
-  "".is_empty        => BOOLEAN true   # only white-space
-  "ABC".lower        => STRING "abc", lower-case using utf8 folding
+  "abc".length        => INTEGER  3
+  "".is_empty         => BOOLEAN true   # only white-space
+  "ABC".lower         => STRING "abc", lower-case using utf8 folding
 =cut
 
 package
@@ -397,18 +397,18 @@ with floats.
 
 =examples of integers
 
-  42            # the answer to everything
-  8T            # how my disk was sold to me
-  7451Mibi      # what my system tells me the space is
-  -12           # negatives
-  1_234_567     # _ on the thousands, more readable
+  42           # the answer to everything
+  8T           # how my disk was sold to me
+  7451Mibi     # what my system tells me the space is
+  -12          # negatives
+  1_234_567    # _ on the thousands, more readable
 
   + 2          => INTEGER   2      # prefix op
-  - 2          -> INTEGER   -2     # prefix op
-  - -2         -> INTEGER   2      # prefix op, negative int
+  - 2          => INTEGER   -2     # prefix op
+  - -2         => INTEGER   2      # prefix op, negative int
 
   1 + 2        => INTEGER   3      # infix op
-  5 - 9        -> INTEGER   -4     # infix op
+  5 - 9        => INTEGER   -4     # infix op
   3 * 4        => INTEGER   12
   12 % 5       => INTEGER   2
   12 / 5       => FLOAT     2.4
@@ -421,7 +421,7 @@ with floats.
 
 Attributes
 
-  (-3).abs     -> INTEGER   3      # -3.abs == -(3.abs)
+  (-3).abs     => INTEGER   3      # -3.abs == -(3.abs)
 
 =cut
 
@@ -740,21 +740,21 @@ in the same timezone, this will return false.
   1966-12-21        # without timezone, default from context
   1966-12-21+0200   # with explicit timezone info
 
-  2023-02-21+0200 - P3D            -> DATE     2023-02-18+0200
-  2012-03-08+0100 + 06:07:08+0200  -> DATETIME 2012-03-08T06:07:08+0300
-  2023-02-26 - 2023-01-20          -> DURATION P1M6D
-  2023-02-22 < 1966-04-05          -> BOOLEAN  false
-  2023-02-22 <=> 1966-04-05        -> INTEGER 1      # -1, 0 1
+  2023-02-21+0200 - P3D            => DATE     2023-02-18+0200
+  2012-03-08+0100 + 06:07:08+0200  => DATETIME 2012-03-08T06:07:08+0300
+  2023-02-26 - 2023-01-20          => DURATION P1M6D
+  2023-02-22 < 1966-04-05          => BOOLEAN  false
+  2023-02-22 <=> 1966-04-05        => INTEGER 1      # -1, 0 1
 
-  4 + 2000-10-20 -> INTEGER 1974  # parser accident repaired
+  4 + 2000-10-20    => INTEGER 1974  # parser accident repaired
 
 Attributes:
 
   date = 2006-11-21+0700
-  date.year      => INTEGER   2006
-  date.month     => INTEGER   11
-  date.day       => INTEGER   21
-  date.timezone  => TIMEZONE  +0700
+  date.year                        => INTEGER   2006
+  date.month                       => INTEGER   11
+  date.day                         => INTEGER   21
+  date.timezone                    => TIMEZONE  +0700
 
 =cut
 
@@ -879,9 +879,9 @@ the actual date:
   23:59:61      # with max leap seconds
   09:11:11.111  # precise time (upto nanoseconds)
 
-  12:00:34 + PT30M => TIME 12:30:34   # end of lunch
-  12:00:34 - PT15M -> TIME 11:45:34   # round-up coworkers
-  23:40:00 + PT7H  => TIME 06:40:00   # early rise
+  12:00:34 + PT30M      => TIME 12:30:34   # end of lunch
+  12:00:34 - PT15M      => TIME 11:45:34   # round-up coworkers
+  23:40:00 + PT7H       => TIME 06:40:00   # early rise
   07:00:00 - 23
 
   18:00:00 ==  17:00:00 => BOOLEAN
@@ -890,10 +890,10 @@ the actual date:
 Attributes:
 
   time = 12:23:34.56
-  time.hour        => INTEGER 12
-  time.minute      => INTEGER 23
-  time.second      => INTEGER 34
-  time.fracsec     => FLOAT   34.56
+  time.hour             => INTEGER 12
+  time.minute           => INTEGER 23
+  time.second           => INTEGER 34
+  time.fracsec          => FLOAT   34.56
 
 =cut
 
@@ -987,8 +987,8 @@ When you subtract (C<->) one timezone from another, you will get a duration.
   +0000
   -0612
 
-  -0600 + PT1H     -> -0500
-  +0230 - PT3H30M  -> -0100
+  -0600 + PT1H     => -0500
+  +0230 - PT3H30M  => -0100
 
 Attributes:
 
@@ -1084,12 +1084,12 @@ comparison.
 
 =examples for duration
 
-  P1Y2M5D          # duration one year, 2 months, 5 days
-  PT1M             # mind the "T" before smaller than day values!
-  P3MT5M           # confusing: 3 months + 5 minutes
-  PT3H4M8.2S       # duration 3 hours, 4 minutes, just over 8 seconds
+  P1Y2M5D           # duration one year, 2 months, 5 days
+  PT1M              # mind the "T" before smaller than day values!
+  P3MT5M            # confusing: 3 months + 5 minutes
+  PT3H4M8.2S        # duration 3 hours, 4 minutes, just over 8 seconds
 
-  - -P1Y           # prefix + and =
+  - -P1Y            # prefix + and =
   P3Y2M + P1YT3M5S  => DURATION P4Y2MT3M5S
   P1Y2MT3H5M - P3Y8MT5H13M14S -> DURATION -P2Y6MT2H8M14S
   P1DT2H * 4        => DURATION P4DT8H
@@ -1204,16 +1204,16 @@ is taken.  This is often stacked with a constant default value at the end.
   tic
   route66
   the_boss
-  _42       # and '_' works as a character
-  αβΩ       # Unicode alpha nums allowed
+  _42             # and '_' works as a character
+  αβΩ             # Unicode alpha nums allowed
 
-  7eleven   # not allowed: no start with number
+  7eleven         # not allowed: no start with number
 
   See "Math::Formula::Context" for the following
-  #frag     # (prefix #) fragment of default object
-  .method   # (prefix .) method on default object
-  name#frag # fragment of object 'name'
-  file.size # method 'size' on object 'file'
+  #frag           # (prefix #) fragment of default object
+  .method         # (prefix .) method on default object
+  name#frag       # fragment of object 'name'
+  file.size       # method 'size' on object 'file'
 
 Attributes on names
 
